@@ -1,0 +1,27 @@
+language: python
+python:
+  - "3.6"
+cache: pip
+install:
+script: 
+- ln -s /home/travis/.cache/pip /home/travis/build/eqrx/mauzr/.eggs
+- python setup.py pytest build_sphinx bdist_wheel sdist
+- touch build/sphinx/html/.nojekyll
+- echo mauzr.eqrx.net > build/sphinx/html/CNAME
+deploy:
+- provider: pages
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN
+  local_dir: build/sphinx/html/
+  on:
+    tags: true
+    branch: false
+- provider: pypi
+  skip_cleanup: true
+  skip_upload_docs: true
+  user: $PYPI_USER
+  password: $PYPI_PASSWD
+  distributions: "sdist bdist_wheel"
+  on:
+    tags: true
+    branch: false

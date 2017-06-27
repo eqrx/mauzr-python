@@ -1,0 +1,10 @@
+# Meta data is generated at build
+mauzr/_meta.py
+# Cache
+__pycache__
+# Build
+dist
+build
+mauzr.egg-info
+.eggs
+.cache
