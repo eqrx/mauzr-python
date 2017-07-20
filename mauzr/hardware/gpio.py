@@ -75,9 +75,18 @@ def link_input(core, cfgbase="gpioin", **kwargs):
     core.mqtt.setup_publish(cfg["topic"], mauzr.platform.serializer.Bool,
                             cfg["qos"])
     core.gpio.setup_input(cfg["pin"], cfg["edge"], cfg["pull"])
+    current = None
+
+    def _on_stable():
+        core.mqtt.publish(cfg["topic"], current, True)
+
+    task = core.scheduler(_on_stable, 20, single=True)
 
     def _on_setting(pin, value):
+        nonlocal current
+
         if pin == cfg["pin"]:
-            core.mqtt.publish(cfg["topic"], value, True)
+            current = value
+            task.enable()
 
     core.gpio.listeners.append(_on_setting)
