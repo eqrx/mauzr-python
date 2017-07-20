@@ -76,9 +76,13 @@ def link_input(core, cfgbase="gpioin", **kwargs):
                             cfg["qos"])
     core.gpio.setup_input(cfg["pin"], cfg["edge"], cfg["pull"])
     current = None
+    last = None
 
     def _on_stable():
-        core.mqtt.publish(cfg["topic"], current, True)
+        nonlocal last
+        if current != last:
+            last = current
+            core.mqtt.publish(cfg["topic"], current, True)
 
     task = core.scheduler(_on_stable, 20, single=True)
 
