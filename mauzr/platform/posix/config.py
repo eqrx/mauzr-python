@@ -82,7 +82,7 @@ class Config:
             self._config = self._config[id_str]
             break
         else:
-            self._log.warning("No config file found for %s", id_str)
+            self._log.debug("No config file found for %s", id_str)
             self._config = {}
 
         self._config["id"] = self.id

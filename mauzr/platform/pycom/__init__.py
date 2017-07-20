@@ -28,7 +28,7 @@ class Core:
         self.wlan = None
         self.mqtt = None
         self.sigfox = None
-        self.config = keys.config
+        self.config = keys.config # pylint: disable=no-member
         self.clean()
 
     @staticmethod
