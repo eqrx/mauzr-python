@@ -106,8 +106,6 @@ class Driver:
 
         # Not ready anymore.
         self._set_ready(False)
-        # Log error.
-        self._log.error(err)
         # Schedule reinit.
         self._init_task.enable()
 
