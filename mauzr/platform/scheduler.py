@@ -39,6 +39,8 @@ class Task:
         :type instant: bool
         :param after: New afer value to set.
         :type after: int
+        :return: Self for convenience.
+        :rtype: mauzr.platform.scheduler.Task
         """
 
         if after is not None:
@@ -47,6 +49,8 @@ class Task:
         self.execution = 0 if instant else self._now() + self._after
         # Inform scheduler
         self._scheduler.on_enabled()
+
+        return self
 
     def disable(self):
         """ Disable / cancel this task. No effect if already running. """
