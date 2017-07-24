@@ -153,7 +153,8 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/3.6': None,
-                       'https://pillow.readthedocs.io/en/4.1.x/': None}
+                       'https://pillow.readthedocs.io/en/4.1.x/': None,
+                       'https://www.pygame.org/docs/': None}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -178,7 +179,8 @@ autodoc_mock_imports = [
     'umqtt',
     'usocket',
     'network',
-    'PIL'
+    'PIL',
+    'pygame'
 ]
 
 modindex_common_prefix = ['mauzr.', 'mauzr.hardware.', 'mauzr.util.',

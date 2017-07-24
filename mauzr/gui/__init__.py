@@ -2,7 +2,7 @@
 __author__ = "Alexander Sowitzki"
 
 import enum
-import pygame
+import pygame # pylint: disable=import-error
 from mauzr.gui.vector import Vector
 
 class Element:
