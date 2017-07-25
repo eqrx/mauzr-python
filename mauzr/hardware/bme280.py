@@ -27,12 +27,18 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         - **base** (:class:`str`) - Topic base for the sensor.
         - **address** (:class:`int`) - I2C address of the sensor.
         - **interval** (:class:`int`) - Fetch interval in milliseconds.
+        - **corrections** (:class:`tuple`) - A tuple of three values that
+            will be added to humidity, pressure and temperature readings \
+            before publish. These values may be None, integer for humidity \
+            and pressure and float for the temperature.
 
     **Output Topics:**
 
-        - **/temperature** (``!f``) - Termperature im °C.
         - **/humidity** (``B``) - humidity in %.
-        - **/pressure** (``!f``) - pressure in Pascal.
+        - **/pressure** (``!I``) - pressure in Pascal.
+        - **/temperature** (``!f``) - Termperature im °C.
+
+
     """
 
     def __init__(self, core, cfgbase="bme280", **kwargs):
@@ -41,6 +47,8 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
 
         self._address = cfg["address"]
         self._base = cfg["base"]
+
+        self._corrections = cfg.get("corrections", (None, None, None))
 
         self._i2c = core.i2c
 
@@ -53,9 +61,9 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         core.mqtt.setup_publish(self._base + "temperature",
                                 mauzr.platform.serializer.Struct("!f"), 0)
         core.mqtt.setup_publish(self._base + "pressure",
-                                mauzr.platform.serializer.Struct("!f"), 0)
+                                mauzr.platform.serializer.Struct("!I"), 0)
         core.mqtt.setup_publish(self._base + "humidity",
-                                mauzr.platform.serializer.Struct("!B"), 0)
+                                mauzr.platform.serializer.Struct("B"), 0)
 
         name = "<BME280@{}>".format(self._base)
         mauzr.hardware.driver.DelayedPollingDriver.__init__(self, core, name,
@@ -130,6 +138,9 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         h = 419430400 if h > 419430400 else h
         hum = h >> 12
 
-        self._mqtt.publish(self._base + "temperature", temp / 100, True)
-        self._mqtt.publish(self._base + "pressure", pres // 256, True)
-        self._mqtt.publish(self._base + "humidity", hum // 1024, True)
+        for lbl, val, cor in zip(("humidity", "pressure", "temperature"),
+                                 (hum // 1024, pres // 256, temp / 100),
+                                 self._corrections):
+            if cor is not None:
+                val += cor
+            self._mqtt.publish(self._base + lbl, val, True)
