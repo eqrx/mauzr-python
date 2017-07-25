@@ -41,7 +41,7 @@ class Driver(mauzr.hardware.driver.PollingDriver):
 
         self._base = cfg["base"]
 
-        name = "<TSL2561@{}>".format(self._base)
+        name = "<Trellis@{}>".format(self._base)
         mauzr.hardware.driver.PollingDriver.__init__(self, core, name,
                                                      cfg["interval"])
         self._i2c = core.i2c
