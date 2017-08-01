@@ -15,6 +15,8 @@ class Element:
     """
 
     def __init__(self, location, size):
+        self._location = location
+        self._size = size
         self._surface = pygame.surface.Surface(size.values)
         self._rect = self._surface.get_rect(center=location.values)
 
