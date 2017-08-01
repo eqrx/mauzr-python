@@ -3,7 +3,6 @@ __author__ = "Alexander Sowitzki"
 
 import io
 
-
 class ImageSerializer:
     """ Serialize images with pillow.
 
@@ -37,7 +36,7 @@ class ImageSerializer:
         :rtype: PIL.Image
         """
 
-        import PIL.Image
+        import PIL.Image # pylint: disable=import-error
 
         stream = io.BytesIO(data)
         return PIL.Image.open(stream)
@@ -59,7 +58,7 @@ class SurfaceSerializer:
         :rtype: pygame.Surface
         """
 
-        import pygame
+        import pygame # pylint: disable=import-error
 
         stream = io.BytesIO(data)
         return pygame.image.load(stream)

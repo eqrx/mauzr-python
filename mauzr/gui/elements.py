@@ -3,7 +3,7 @@ __author__ = "Alexander Sowitzki"
 
 from mauzr.platform.serializer import Bool as BS
 from mauzr.gui import Element, TextMixin, ColorStateMixin, ColorState
-import pygame
+import pygame # pylint: disable=import-error
 
 class AgentIndicator(ColorStateMixin, TextMixin, Element):
     """ Indicate the presence of a mauzr agent.

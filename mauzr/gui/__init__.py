@@ -143,7 +143,7 @@ class TextMixin:
         self._surface.blit(self._text_surf, self._text_rect)
 
 
-def pygame_loop(core, elements, fps=30):
+def pygame_loop(core, elements, fps=10):
     """ Perform the loop of pygame.
 
     :param core: Core instance.
