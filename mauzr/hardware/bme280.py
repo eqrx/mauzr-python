@@ -37,8 +37,6 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         - **/humidity** (``B``) - humidity in %.
         - **/pressure** (``!I``) - pressure in Pascal.
         - **/temperature** (``!f``) - Termperature im °C.
-
-
     """
 
     def __init__(self, core, cfgbase="bme280", **kwargs):
