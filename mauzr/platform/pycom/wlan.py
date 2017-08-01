@@ -22,7 +22,7 @@ class Manager:
     def __init__(self, core, cfgbase="wlan", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
-        self.log = logging.getLogger("<WLAN>")
+        self._log = logging.getLogger("<WLAN>")
 
         self._maintain_task = core.scheduler(self._maintain, 5000,
                                              single=False)
@@ -58,7 +58,7 @@ class Manager:
 
         if not self._wlan.isconnected():
             ssid, passwd = self._networks[self._current_config]
-            self.log.info("Attempting conntection to %s", ssid)
+            self._log.info("Attempting connection to %s", ssid)
             self._wlan.connect(ssid, auth=(network.WLAN.WPA2, passwd),
                                timeout=3000)
 
