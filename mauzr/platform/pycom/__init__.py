@@ -132,7 +132,7 @@ class Core:
         """ Setup I2C. See :class:`mauzr.platform.pycom.i2c.Bus`. """
 
         import mauzr.platform.pycom.i2c
-        self.i2c = mauzr.platform.pycom.i2c.Bus(*args, **kwargs)
+        self.i2c = mauzr.platform.pycom.i2c.Bus(self, *args, **kwargs)
         self.add_context(self.i2c)
         self.clean()
 

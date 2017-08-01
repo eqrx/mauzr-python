@@ -7,16 +7,27 @@ import machine # pylint: disable=import-error
 class Bus:
     """ Manage an I2C bus.
 
-    :param baudrate: Baudrate of the bus.
-    :type baudrate: int
-    :param pins: Pins to use for the bus (SDA, SCL).
-    :type pins: tuple
+    :param core: Core instance.
+    :type core: object
+    :param cfgbase: Configuration entry for this unit.
+    :type cfgbase: str
+    :param kwargs: Keyword arguments that will be merged into the config.
+    :type kwargs: dict
+
+    **Configuration:**
+
+        - **baudrate** (:class:`int`) - Baudrate of the bus.
+        - **pins** (:class:`tuple`) - Pins to use for the bus (SDA, SCL) \
+            as tuple of strings.
     """
 
-    def __init__(self, baudrate=400000, pins=("P9", "P10")):
-        self.baudrate = baudrate
+    def __init__(self, core, cfgbase="i2c", **kwargs):
+        cfg = core.config[cfgbase]
+        cfg.update(kwargs)
+
+        self.baudrate = cfg.get("baudrate", 400000)
+        self.pins = cfg.get("pins", ("P9", "P10"))
         self.i2c = machine.I2C(0)
-        self.pins = pins
 
     def __enter__(self):
         # Init bus.
