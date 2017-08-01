@@ -2,7 +2,7 @@
 __author__ = "Alexander Sowitzki"
 
 import io
-import PIL.Image # pylint: disable=import-error
+
 
 class ImageSerializer:
     """ Serialize images with pillow.
@@ -37,5 +37,29 @@ class ImageSerializer:
         :rtype: PIL.Image
         """
 
+        import PIL.Image
+
         stream = io.BytesIO(data)
         return PIL.Image.open(stream)
+
+class SurfaceSerializer:
+    """ Serialize images for pygame. """
+
+    @staticmethod
+    def pack(image):
+        """ Pack is not implemented for surfaces. """
+        raise NotImplementedError()
+
+    @staticmethod
+    def unpack(data):
+        """
+        :param data: Packed image.
+        :type data: bytes
+        :returns: Unpacked image.
+        :rtype: pygame.Surface
+        """
+
+        import pygame
+
+        stream = io.BytesIO(data)
+        return pygame.image.load(stream)
