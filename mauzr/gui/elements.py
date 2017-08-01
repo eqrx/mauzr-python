@@ -3,6 +3,7 @@ __author__ = "Alexander Sowitzki"
 
 from mauzr.platform.serializer import Bool as BS
 from mauzr.gui import Element, TextMixin, ColorStateMixin, ColorState
+import pygame
 
 class AgentIndicator(ColorStateMixin, TextMixin, Element):
     """ Indicate the presence of a mauzr agent.
@@ -222,3 +223,33 @@ class ToggleController(TextMixin, Element):
         elif self._current:
             return self.COLOR_ON
         return self.COLOR_OFF
+
+class FeedDisplayer(Element):
+    """ Display an image feed.
+
+    :param core: Core instance.
+    :type core: object
+    :param topic: Topic to receive images by.
+    :type topic: str
+    :param qos: QoS to use for publish.
+    :type qos: int
+    :param location: Center of the element.
+    :type location: mauzr.gui.Vector
+    :param size: Size of the element.
+    :type size: mauzr.gui.Vector
+    """
+
+    def __init__(self, core, topic, qos, location, size):
+        from mauzr.util.image.serializer import SurfaceSerializer
+        core.mqtt.subscribe(topic, self._on_image,
+                            SurfaceSerializer, qos)
+        Element.__init__(self, location, size)
+
+    def _on_image(self, _topic, surface):
+        self._surface = pygame.transform.scale(surface, self._size.values)
+        self._rect = self._surface.get_rect(center=self._location.values)
+
+    def draw(self):
+        """ Draw the element. """
+
+        pygame.display.get_surface().blit(self._surface, self._rect)
