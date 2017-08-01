@@ -2,8 +2,9 @@
 __author__ = "Alexander Sowitzki"
 
 import gc # pylint: disable=import-error
+import ssl # pylint: disable=import-error
 import umqtt # pylint: disable=import-error
-import umqtt.simple # pylint: disable=import-error
+from umqtt.simple import MQTTClient # pylint: disable=import-error
 
 # pylint: disable=too-many-instance-attributes,no-member
 class Client:
@@ -18,8 +19,11 @@ class Client:
 
     **Configuration (mqtt section):**
 
-        - *client_id*: MQTT client ID (``str``).
-        - *status_topic*: Topic to publish information to.
+        - **client_id** (:class:`str`): MQTT client ID.
+        - **status_topic** (:class:`str`): Topic to publish information to.
+        - **ca** (:class:`str`): If specified the connection is performed with \
+            TLS. If set it must be the path of the CA to validate the server \
+            against.
     """
 
     def __init__(self, core, cfgbase="mqtt", **kwargs):
@@ -48,6 +52,7 @@ class Client:
         self._port = None
         self._user = None
         self._password = None
+        self._ca = None
 
     def set_host(self, **kwargs):
         """ Set host to connect to.
@@ -60,6 +65,7 @@ class Client:
         self._password = kwargs["password"]
         self._host = kwargs["host"]
         self._port = kwargs["port"]
+        self._ca = kwargs.get("ca", None)
 
     def __enter__(self):
         # Startup.
@@ -89,12 +95,12 @@ class Client:
         try:
             self._log.info("connecting")
             # Create client
-            self._mqtt = umqtt.simple.MQTTClient(server=self._host,
-                                                 port=self._port,
-                                                 client_id=self._client_id,
-                                                 keepalive=30,
-                                                 user=self._user,
-                                                 password=self._password)
+            self._mqtt = MQTTClient(server=self._host, port=self._port,
+                                    client_id=self._client_id, keepalive=30,
+                                    user=self._user, password=self._password,
+                                    ssl=self._ca,
+                                    ssl_params={"cert_reqs": ssl.CERT_REQUIRED,
+                                                "ca_certs": self._ca})
             # Set last will
             self._mqtt.set_last_will(self._agent_topic, b'\x00', True, 1)
             # Set the message callback
