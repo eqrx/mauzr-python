@@ -41,18 +41,14 @@ class Client:
 
         scheduler = core.scheduler
         self._manage_task = scheduler(self._manage, 50, single=False)
-        self._ping_task = scheduler(self._ping, 30000//2, single=False)
-        self._pong_task = scheduler(self._pong_timeout, 30000, single=True)
+        self._ping_task = scheduler(self._ping, 15000//2, single=False)
+        self._pong_task = scheduler(self._pong_timeout, 15000, single=True)
         self._connect_task = scheduler(self._connect, 1000, single=True)
         self._connect_task.enable(instant=True)
 
         self._connected = False
 
-        self._host = None
-        self._port = None
-        self._user = None
-        self._password = None
-        self._ca = None
+        self._servercfg = None
 
     def set_host(self, **kwargs):
         """ Set host to connect to.
@@ -61,11 +57,7 @@ class Client:
         :type kwargs: dict
         """
 
-        self._user = kwargs["user"]
-        self._password = kwargs["password"]
-        self._host = kwargs["host"]
-        self._port = kwargs["port"]
-        self._ca = kwargs.get("ca", None)
+        self._servercfg = kwargs
 
     def __enter__(self):
         # Startup.
@@ -95,12 +87,14 @@ class Client:
         try:
             self._log.info("connecting")
             # Create client
-            self._mqtt = MQTTClient(server=self._host, port=self._port,
+
+            cfg = self._servercfg
+            ca = cfg.get("ca", None)
+            self._mqtt = MQTTClient(server=cfg["host"], port=cfg["port"],
                                     client_id=self._client_id, keepalive=30,
-                                    user=self._user, password=self._password,
-                                    ssl=self._ca,
+                                    user=cfg["user"], password=cfg["password"],
                                     ssl_params={"cert_reqs": ssl.CERT_REQUIRED,
-                                                "ca_certs": self._ca})
+                                                "ca_certs": ca}, ssl=ca)
             # Set last will
             self._mqtt.set_last_will(self._agent_topic, b'\x00', True, 1)
             # Set the message callback
