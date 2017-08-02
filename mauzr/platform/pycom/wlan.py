@@ -17,14 +17,15 @@ class Manager:
 
     **Configuration:**
 
-        - *networks*: A list of tuples containing SSID and network password.
+        - **networks** (:class:`dict`: A list of dictionaries containing \
+            ssid, password and connection timeout in milliseconds.
     """
     def __init__(self, core, cfgbase="wlan", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
         self._log = logging.getLogger("<WLAN>")
 
-        self._maintain_task = core.scheduler(self._maintain, 5000,
+        self._maintain_task = core.scheduler(self._maintain, 10000,
                                              single=False)
         self._delay_task = core.scheduler(self._delayed, 20000,
                                           single=True)
@@ -57,10 +58,11 @@ class Manager:
         # Maintain wlan connection.
 
         if not self._wlan.isconnected():
-            ssid, passwd = self._networks[self._current_config]
-            self._log.info("Attempting connection to %s", ssid)
-            self._wlan.connect(ssid, auth=(network.WLAN.WPA2, passwd),
-                               timeout=3000)
+            cfg = self._networks[self._current_config]
+            self._log.info("Attempting connection to %s", cfg["ssid"])
+            self._wlan.connect(cfg["ssid"], auth=(network.WLAN.WPA2,
+                                                  cfg["password"]),
+                               timeout=cfg.get("timeout", 3000))
 
             if self._current_config == len(self._networks) - 1:
                 self._maintain_task.disable()
