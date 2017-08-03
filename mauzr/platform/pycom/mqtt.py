@@ -220,8 +220,6 @@ class Client:
         if qos == 2:
             raise ValueError("QoS 2 not supported")
         try:
-            # Blink LED
-            self.led.set(self.led.ACT)
             return self._mqtt.publish(topic, value, retain, qos)
         except OSError:
             self._log.warning("Ignoring publish while offline")
