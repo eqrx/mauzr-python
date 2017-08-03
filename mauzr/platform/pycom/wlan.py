@@ -31,8 +31,12 @@ class Manager:
                                           single=True)
         self._networks = cfg["networks"]
         self._current_config = 0
-        self._wlan = network.WLAN(mode=network.WLAN.STA)
+        self._wlan = self._setup()
         self._maintain_task.enable(instant=True)
+
+    @staticmethod
+    def _setup():
+        return network.WLAN(mode=network.WLAN.STA)
 
     def _delayed(self):
         # Called after a maintainance delay was performed.
