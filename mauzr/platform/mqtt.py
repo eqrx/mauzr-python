@@ -2,7 +2,7 @@
 __author__ = "Alexander Sowitzki"
 
 import logging
-import _thread
+import sys
 
 class Manager:
     """ Connect to an MQTT broker to exchange messages via topics.
@@ -117,8 +117,7 @@ class Manager:
         except Exception:
             self._log.error("Exception for %s. Terminating.", config["topic"])
             # Interrupt main thread if supported by the platform.
-            if hasattr(_thread, "interrupt_main"):
-                _thread.interrupt_main()
+            sys.exit(1)
             # Raise exception to the mqtt handler (May be ignored)
             raise
 
