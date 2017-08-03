@@ -58,15 +58,18 @@ class Manager:
 
         machine.RTC().ntp_sync("pool.ntp.org")
 
+    def _connect(self, ssid, password, timeout):
+        self._wlan.connect(ssid, auth=(network.WLAN.WPA2, password),
+                           timeout=timeout)
+
     def _maintain(self):
         # Maintain wlan connection.
 
         if not self._wlan.isconnected():
             cfg = self._networks[self._current_config]
             self._log.info("Attempting connection to %s", cfg["ssid"])
-            self._wlan.connect(cfg["ssid"], auth=(network.WLAN.WPA2,
-                                                  cfg["password"]),
-                               timeout=cfg.get("timeout", 3000))
+            self._connect(cfg["ssid"], cfg["password"],
+                          cfg.get("timeout", 3000))
 
             if self._current_config == len(self._networks) - 1:
                 self._maintain_task.disable()

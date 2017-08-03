@@ -1,7 +1,10 @@
 """ Serializers for data channels. """
 __author__ = "Alexander Sowitzki"
 
-import struct
+try:
+    import struct
+except ImportError:
+    import ustruct as struct
 
 class Enum:
     """ Serialize messages represented by an :class:`enum.Enum`.

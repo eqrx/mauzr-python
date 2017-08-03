@@ -2,7 +2,7 @@
 __author__ = "Alexander Sowitzki"
 
 import gc # pylint: disable=import-error
-import ssl # pylint: disable=import-error
+import ussl # pylint: disable=import-error
 import umqtt # pylint: disable=import-error
 from umqtt.simple import MQTTClient # pylint: disable=import-error
 
@@ -36,7 +36,6 @@ class Client:
         self._agent_topic = cfg["status_topic"]
         self.manager = None
         self._mqtt = None
-        self.led = core.led
         self._client_id = cfg["client_id"]
 
         scheduler = core.scheduler
@@ -90,11 +89,14 @@ class Client:
 
             cfg = self._servercfg
             ca = cfg.get("ca", None)
+            ssl_params = None
+            if ca:
+                ssl_params = {"cert_reqs": ussl.CERT_REQUIRED, "ca_certs": ca}
+
             self._mqtt = MQTTClient(server=cfg["host"], port=cfg["port"],
                                     client_id=self._client_id, keepalive=30,
                                     user=cfg["user"], password=cfg["password"],
-                                    ssl_params={"cert_reqs": ssl.CERT_REQUIRED,
-                                                "ca_certs": ca}, ssl=ca)
+                                    ssl_params=ssl_params, ssl=ca)
             # Set last will
             self._mqtt.set_last_will(self._agent_topic, b'\x00', True, 1)
             # Set the message callback
@@ -159,8 +161,6 @@ class Client:
     def _on_message(self, topic, message):
         # Called when a message was received.
 
-        # Blink the LED
-        self.led.set(self.led.ACT)
         # Call manager
         self.manager.on_message(topic.decode(), message)
         # Clean up

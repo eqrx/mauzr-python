@@ -7,7 +7,7 @@ class GPIO:
     """ Use GPIO pins. """
 
     PULL_MAPPING = {"none": None, "up": machine.Pin.PULL_UP,
-                    "down": machine.Pin.PULL_DOWN}
+                    "down": machine.Pin.PULL_UP+1}
     EDGE_MAPPING = {"none": None, "rising": machine.Pin.IRQ_RISING,
                     "falling": machine.Pin.IRQ_FALLING,
                     "both": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING}
