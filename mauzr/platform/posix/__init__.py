@@ -35,6 +35,15 @@ class Core:
         self._setup_logging()
         self._setup_scheduler()
 
+    @staticmethod
+    def on_failure():
+        """ Call when an unrecoverable failure happens.
+
+        Shuts the program down.
+        """
+
+        _thread.interrupt_main()
+
     def _setup_config(self, suit, agent, instance, parser):
         from mauzr.platform.posix.config import Config
         self.config = Config(suit, agent, instance, parser)
@@ -92,7 +101,7 @@ class Core:
             self.scheduler.run()
         except Exception:
             # Interrupt main thread
-            _thread.interrupt_main()
+            self.on_failure()
             raise
 
     def __enter__(self):

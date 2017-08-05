@@ -35,6 +35,10 @@ class Core(mauzr.platform.pycom.Core):
         self.wlan = Manager(self)
         self.clean()
 
+    @staticmethod
+    def on_failure():
+        """ Call when an unrecoverable failure happens. """
+
     def run(self, reset_on_exception):
         """ Run the program. This blocks until the program is finished.
 

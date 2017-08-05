@@ -2,7 +2,6 @@
 __author__ = "Alexander Sowitzki"
 
 import logging
-import sys
 
 class Manager:
     """ Connect to an MQTT broker to exchange messages via topics.
@@ -24,6 +23,8 @@ class Manager:
     def __init__(self, core, cfgbase="mqtt", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
+
+        self._core = core
 
         if "client_id" not in cfg:
             cfg["client_id"] = "-".join(core.config["id"])
@@ -116,8 +117,8 @@ class Manager:
                 callback(topic, payload)
         except Exception:
             self._log.error("Exception for %s. Terminating.", config["topic"])
-            # Interrupt main thread if supported by the platform.
-            sys.exit(1)
+            # Inform core about failure
+            self._core.on_failure()
             # Raise exception to the mqtt handler (May be ignored)
             raise
 
