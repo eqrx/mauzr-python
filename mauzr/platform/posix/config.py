@@ -51,8 +51,8 @@ class Config:
     def __setitem__(self, key, value):
         self._config[key] = value
 
-    def _read_config(self):
-        # Find and read yaml configuration.
+    def read_config(self):
+        """ Find and read yaml configuration. """
 
         import os.path
         import yaml
@@ -86,6 +86,7 @@ class Config:
             self._config = {}
 
         self._config["id"] = self.id
+        return self._config
 
     def parse(self):
         """ Parse arguments and configuration. """
@@ -96,4 +97,4 @@ class Config:
                 raise ValueError("Instance was already set by agent. "
                                  "Overriding not allowed.")
             self.id.append(self._args.instance)
-        self._read_config()
+        self.read_config()

@@ -5,7 +5,6 @@ import logging
 import sys
 import gc # pylint: disable=import-error
 import machine # pylint: disable=import-error
-import keys # pylint: disable=import-error
 import utime # pylint: disable=import-error
 
 class Core:
@@ -28,7 +27,8 @@ class Core:
         self.wlan = None
         self.mqtt = None
         self.sigfox = None
-        self.config = keys.config # pylint: disable=no-member
+        # pylint: disable=eval-used
+        self.config = eval(open("config.py").read())
         self.clean()
 
     @staticmethod

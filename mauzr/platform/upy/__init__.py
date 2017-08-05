@@ -4,7 +4,6 @@ __author__ = "Alexander Sowitzki"
 import logging
 import sys
 import machine # pylint: disable=import-error
-import keys # pylint: disable=import-error
 import utime # pylint: disable=import-error
 import mauzr.platform.pycom
 import mauzr.platform.pycom.scheduler
@@ -25,7 +24,8 @@ class Core(mauzr.platform.pycom.Core):
         self.i2c = None
         self.wlan = None
         self.mqtt = None
-        self.config = keys.config # pylint: disable=no-member
+        # pylint: disable=eval-used
+        self.config = eval(open("config.py").read())
         self.clean()
 
     def _setup_wlan(self):
