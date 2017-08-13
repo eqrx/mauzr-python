@@ -26,12 +26,6 @@ class Manager:
 
         self._core = core
 
-        if "client_id" not in cfg:
-            cfg["client_id"] = "-".join(core.config["id"])
-        if "status_topic" not in cfg:
-            topic = cfg["base"] + "agents/" + cfg["client_id"]
-            cfg["status_topic"] = topic
-
         self._log = logging.getLogger("<MQTT Manager>")
 
         self.mqtt = None

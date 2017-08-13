@@ -16,8 +16,7 @@ class Client:
 
     **Configuration:**
 
-        - *client_id*: MQTT client ID (``str``).
-        - *status_topic*: Topic to publish information to.
+        - **base** (:class:`str`): Topic base of the suit.
     """
 
     def __init__(self, core, cfgbase="mqtt", **kwargs):
@@ -25,26 +24,16 @@ class Client:
         cfg.update(kwargs)
 
         self._log = core.logger("mqtt-client")
-        if "client_id" in cfg:
-            client_id = cfg["client_id"]
-        else:
-            client_id = "-".join(core.config["id"])
 
-        self.client = paho.mqtt.client.Client(client_id=client_id,
-                                              clean_session=True)
-        self._agent_topic = cfg["status_topic"]
+        self.client = paho.mqtt.client.Client()
+        self._status_topic = None
+        self._base = cfg["base"]
         self.manager = None
 
         self._subscriptions = {}
         self._publications = {}
 
-        self.client.on_connect = self._on_connect
-        self.client.on_disconnect = self._on_disconnect
-        self.client.on_message = self._on_message
         self._keepalive = 30
-
-        self.client.will_set(self._agent_topic, payload=bytearray(b'\x00'),
-                             qos=2, retain=True)
 
     def __enter__(self):
         # Start the connector.
@@ -57,11 +46,17 @@ class Client:
         :param kwargs: Host Configuration
         :type kwargs: dict
         """
-        self.client.username_pw_set(username=kwargs["user"],
-                                    password=kwargs["password"])
-        # Fix for library
-        # pylint: disable=protected-access
-        self.client._ssl_context = None
+
+        user = kwargs["user"]
+        self._status_topic = "{}agents/{}".format(self._base, user)
+        self.client.reinitialise(client_id=user, clean_session=True)
+        self.client.username_pw_set(username=user, password=kwargs["password"])
+        self.client.will_set(self._status_topic, payload=bytearray(b'\x00'),
+                             qos=2, retain=True)
+        self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
+        self.client.on_message = self._on_message
+
         if "ca" in kwargs:
             self.client.tls_set(ca_certs=kwargs["ca"],
                                 cert_reqs=ssl.CERT_REQUIRED,
@@ -74,7 +69,7 @@ class Client:
     def __exit__(self, *exc_details):
         # Disconnect and stop connector.
 
-        self.client.publish(self._agent_topic, payload=bytearray(b'\x00'),
+        self.client.publish(self._status_topic, payload=bytearray(b'\x00'),
                             qos=2, retain=True)
         self.client.loop_stop()
         self.client.disconnect()
@@ -87,7 +82,7 @@ class Client:
     def _on_connect(self, *details):
         # Indicate that the client connected to the broker.
 
-        self.client.publish(self._agent_topic, payload=bytearray(b'\xff'),
+        self.client.publish(self._status_topic, payload=bytearray(b'\xff'),
                             qos=2, retain=True)
         self.manager.on_connect(*details)
 

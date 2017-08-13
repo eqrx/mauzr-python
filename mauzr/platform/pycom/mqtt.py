@@ -19,11 +19,7 @@ class Client:
 
     **Configuration (mqtt section):**
 
-        - **client_id** (:class:`str`): MQTT client ID.
-        - **status_topic** (:class:`str`): Topic to publish information to.
-        - **ca** (:class:`str`): If specified the connection is performed with \
-            TLS. If set it must be the path of the CA to validate the server \
-            against.
+        - **base** (:class:`str`): Topic base of the suit.
     """
 
     def __init__(self, core, cfgbase="mqtt", **kwargs):
@@ -33,10 +29,10 @@ class Client:
         core.add_context(self)
 
         self._log = core.logger("<MQTT Client>")
-        self._agent_topic = cfg["status_topic"]
+        self._base = cfg["base"]
         self.manager = None
         self._mqtt = None
-        self._client_id = cfg["client_id"]
+        self._status_topic = None
 
         scheduler = core.scheduler
         self._manage_task = scheduler(self._manage, 50, single=False)
@@ -74,7 +70,7 @@ class Client:
 
         if self._connected:
             try:
-                self._mqtt.publish(self._agent_topic, b'\x00', True, 1)
+                self._mqtt.publish(self._status_topic, b'\x00', True, 1)
                 # Disconnect cleanly
                 self._mqtt.disconnect()
             except OSError:
@@ -93,12 +89,15 @@ class Client:
             if ca:
                 ssl_params = {"cert_reqs": ussl.CERT_REQUIRED, "ca_certs": ca}
 
+            user = cfg["user"]
+            self._status_topic = "{}agents/{}".format(self._base, user)
+
             self._mqtt = MQTTClient(server=cfg["host"], port=cfg["port"],
-                                    client_id=self._client_id, keepalive=30,
-                                    user=cfg["user"], password=cfg["password"],
+                                    client_id=user, keepalive=30,
+                                    user=user, password=cfg["password"],
                                     ssl_params=ssl_params, ssl=ca)
             # Set last will
-            self._mqtt.set_last_will(self._agent_topic, b'\x00', True, 1)
+            self._mqtt.set_last_will(self._status_topic, b'\x00', True, 1)
             # Set the message callback
             self._mqtt.set_callback(self._on_message)
             # Perform connect
@@ -106,7 +105,7 @@ class Client:
             # Connect done, reduce timeout of socket
             self._mqtt.sock.settimeout(1)
             # Pulish presence message
-            self._mqtt.publish(self._agent_topic, b'\xff', True, 1)
+            self._mqtt.publish(self._status_topic, b'\xff', True, 1)
 
             self._connected = True
 
