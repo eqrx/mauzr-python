@@ -51,7 +51,7 @@ class Client:
         self._status_topic = "{}agents/{}".format(self._base, user)
         self.client.reinitialise(client_id=user, clean_session=True)
         self.client.username_pw_set(username=user, password=kwargs["password"])
-        self.client.will_set(self._status_topic, payload=bytearray(b'\x00'),
+        self.client.will_set(self._status_topic, payload=b'\x00',
                              qos=2, retain=True)
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
@@ -69,7 +69,7 @@ class Client:
     def __exit__(self, *exc_details):
         # Disconnect and stop connector.
 
-        self.client.publish(self._status_topic, payload=bytearray(b'\x00'),
+        self.client.publish(self._status_topic, payload=b'\x00',
                             qos=2, retain=True)
         self.client.loop_stop()
         self.client.disconnect()
@@ -82,7 +82,7 @@ class Client:
     def _on_connect(self, *details):
         # Indicate that the client connected to the broker.
 
-        self.client.publish(self._status_topic, payload=bytearray(b'\xff'),
+        self.client.publish(self._status_topic, payload=b'\xff',
                             qos=2, retain=True)
         self.manager.on_connect(*details)
 
