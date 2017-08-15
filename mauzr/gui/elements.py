@@ -1,11 +1,15 @@
 """ GUI elements. """
 __author__ = "Alexander Sowitzki"
 
+import math
 from mauzr.platform.serializer import Bool as BS
-from mauzr.gui import Element, TextMixin, ColorStateMixin, ColorState
+from mauzr.gui import TextMixin, ColorStateMixin, RectBackgroundMixin
+from mauzr.gui import BaseElement, ColorState
 import pygame # pylint: disable=import-error
 
-class AgentIndicator(ColorStateMixin, TextMixin, Element):
+class AgentIndicator(ColorStateMixin, TextMixin, RectBackgroundMixin,
+                     BaseElement):
+
     """ Indicate the presence of a mauzr agent.
 
     :param core: Core instance.
@@ -19,7 +23,8 @@ class AgentIndicator(ColorStateMixin, TextMixin, Element):
     """
 
     def __init__(self, core, topic, location, size):
-        Element.__init__(self, location, size)
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
         TextMixin.__init__(self, topic.split("/")[-1], size)
         conditions = {ColorState.UNKNOWN: lambda v: v is None,
                       ColorState.ERROR: lambda v: v is False,
@@ -40,13 +45,12 @@ class AgentIndicator(ColorStateMixin, TextMixin, Element):
         self._update_state(value)
         self._state_acknowledged = False
 
-    def on_mouse(self, pos):
+    def _on_click(self):
         # Assume click means acknowledge
-        if self._rect.collidepoint(pos):
-            self._state_acknowledged = True
+        self._state_acknowledged = True
 
 
-class Indicator(ColorStateMixin, TextMixin, Element):
+class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
     """ Display for the value of a topic.
 
     :param core: Core instance.
@@ -80,7 +84,8 @@ class Indicator(ColorStateMixin, TextMixin, Element):
 
     def __init__(self, core, topic, serializer, label, fmt,
                  state_conditions, timeout, location, size):
-        Element.__init__(self, location, size)
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
         TextMixin.__init__(self, label + ": ?", size)
         state_conditions[ColorState.UNKNOWN] = lambda v: v is None
         ColorStateMixin.__init__(self, state_conditions)
@@ -108,12 +113,11 @@ class Indicator(ColorStateMixin, TextMixin, Element):
             # Delay timeout
             self._timer.enable()
 
-    def on_mouse(self, pos):
+    def _on_click(self):
         # Assume click means acknowledge
-        if self._rect.collidepoint(pos):
-            self._state_acknowledged = True
+        self._state_acknowledged = True
 
-class SimpleController(TextMixin, Element):
+class SimpleController(TextMixin, RectBackgroundMixin, BaseElement):
     """ Controller for sending a value when clicked.
 
     :param core: Core instance.
@@ -144,7 +148,8 @@ class SimpleController(TextMixin, Element):
 
     def __init__(self, core, send_topic, cond_topic, qos, retain, payload,
                  label, location, size):
-        Element.__init__(self, location, size)
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
         TextMixin.__init__(self, label, size)
 
         core.mqtt.subscribe(cond_topic, self._on_change, BS, qos)
@@ -159,8 +164,8 @@ class SimpleController(TextMixin, Element):
     def _on_change(self, _topic, value):
         self._ready = value
 
-    def on_mouse(self, pos):
-        if self._rect.collidepoint(pos) and self._ready:
+    def _on_click(self):
+        if self._ready:
             self._mqtt.publish(self._send_topic, self._payload, self._retain)
 
     @property
@@ -169,7 +174,7 @@ class SimpleController(TextMixin, Element):
             return self.COLOR_READY
         return self.COLOR_NOT_READY
 
-class ToggleController(TextMixin, Element):
+class ToggleController(TextMixin, RectBackgroundMixin, BaseElement):
     """ Controller for toggling a values between two states.
 
     :param core: Core instance.
@@ -198,7 +203,8 @@ class ToggleController(TextMixin, Element):
 
     def __init__(self, core, topic, qos, retain, label,
                  location, size):
-        Element.__init__(self, location, size)
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
         TextMixin.__init__(self, label, size)
 
         core.mqtt.subscribe(topic, self._on_change, BS, qos)
@@ -212,9 +218,8 @@ class ToggleController(TextMixin, Element):
     def _on_change(self, _topic, value):
         self._current = value
 
-    def on_mouse(self, pos):
-        if self._rect.collidepoint(pos):
-            self._mqtt.publish(self._topic, not self._current, self._retain)
+    def _on_click(self):
+        self._mqtt.publish(self._topic, not self._current, self._retain)
 
     @property
     def _color(self):
@@ -224,7 +229,7 @@ class ToggleController(TextMixin, Element):
             return self.COLOR_ON
         return self.COLOR_OFF
 
-class FeedDisplayer(Element):
+class FeedDisplayer(BaseElement):
     """ Display an image feed.
 
     :param core: Core instance.
@@ -243,13 +248,29 @@ class FeedDisplayer(Element):
         from mauzr.util.image.serializer import SurfaceSerializer
         core.mqtt.subscribe(topic, self._on_image,
                             SurfaceSerializer, qos)
-        Element.__init__(self, location, size)
+        BaseElement.__init__(self, location, size)
+        self._image_surface = None
+        self._image_rect = None
 
     def _on_image(self, _topic, surface):
-        self._surface = pygame.transform.scale(surface, self._size.values)
-        self._rect = self._surface.get_rect(center=self._location.values)
+        self._image_surface = pygame.transform.scale(surface, self._size.values)
+        self._image_rect = self._image_surface.get_rect()
 
-    def draw(self):
+    def _draw_foreground(self):
         """ Draw the element. """
 
-        pygame.display.get_surface().blit(self._surface, self._rect)
+        if self._image_surface:
+            self._surface.blit(self._image_surface, self._image_rect)
+
+class Gauge(RectBackgroundMixin, BaseElement):
+    """ Gauge element. """
+
+    def __init__(self, location, size):
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
+
+        self._gauge_value = math.pi * 0.5
+
+    def _draw_foreground(self):
+        pygame.draw.arc(self._surface, [255, 255, 0], self._surface.get_rect(),
+                        0, self._gauge_value, 20)

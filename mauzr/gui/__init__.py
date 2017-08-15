@@ -5,7 +5,7 @@ import enum
 import pygame # pylint: disable=import-error
 from mauzr.gui.vector import Vector
 
-class Element:
+class BaseElement:
     """ An visible element inside a GUI.
 
     :param location: Center of the element.
@@ -17,8 +17,13 @@ class Element:
     def __init__(self, location, size):
         self._location = location
         self._size = size
-        self._surface = pygame.surface.Surface(size.values)
-        self._rect = self._surface.get_rect(center=location.values)
+        screen = pygame.display.get_surface()
+        self._rect = pygame.Rect(location.values, size.values)
+        self._surface = screen.subsurface(self._rect)
+
+    def _on_click(self):
+        """ Called when the element is clicked. """
+
 
     def on_mouse(self, position):
         """ Called on mouse click.
@@ -27,8 +32,23 @@ class Element:
         :type position: tuple
         """
 
-    def _draw_components(self):
-        """ Draw components of this element.
+        if self._rect.collidepoint(position):
+            self._on_click()
+
+    def _draw_text(self):
+        """ Draw text of this element.
+
+        Should be overridden by visible mixins.
+        """
+
+    def _draw_background(self):
+        """ Draw background of this element.
+
+        Should be overridden by visible mixins.
+        """
+
+    def _draw_foreground(self):
+        """ Draw foreground of this element.
 
         Should be overridden by visible mixins.
         """
@@ -42,9 +62,16 @@ class Element:
     def draw(self):
         """ Draw the element. """
 
+        self._draw_background()
+        self._draw_foreground()
+        self._draw_text()
+
+class RectBackgroundMixin:
+    """ An rectangle element inside a GUI. """
+
+    def _draw_background(self):
         self._surface.fill(self._color)
-        self._draw_components()
-        pygame.display.get_surface().blit(self._surface, self._rect)
+
 
 class ColorState(enum.Enum):
     """ State of :class:`mauzr.gui.ColorStateMixin`.
@@ -137,7 +164,7 @@ class TextMixin:
         c = self._text_offset.values
         self._text_rect = self._text_surf.get_rect(center=c)
 
-    def _draw_components(self):
+    def _draw_text(self):
         """ Inject text into element. """
 
         self._surface.blit(self._text_surf, self._text_rect)

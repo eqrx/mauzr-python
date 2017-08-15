@@ -33,3 +33,6 @@ class Vector:
 
     def __mul__(self, other):
         return Vector(*[a*other for a in self.values])
+
+    def __repr__(self):
+        return f"mauzr.gui.vector.Vector(*{self.values})"
