@@ -109,7 +109,8 @@ setuptools.setup(
             'mauzr-picamera=mauzr.platform.raspberry.camera:main',
             'mauzr-linuxaudio=mauzr.platform.linux.audio.driver:main',
             'mauzr-imageviewer=mauzr.util.image.viewer:main',
-            'mauzr-rrdlogger=mauzr.util.rrd.logger:main'
+            'mauzr-rrdlogger=mauzr.util.rrd.logger:main',
+            'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main'
         ]
     }
 )
