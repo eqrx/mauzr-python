@@ -42,11 +42,8 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
     def run(self):
         """ Run the scheduler and process tasks. """
 
-        try:
-            while True:
-                # Handle scheduler
-                self._handle()
-                # Force garbage collector
-                gc.collect()
-        finally:
-            pass
+        while True:
+            # Handle scheduler
+            self._handle()
+            # Force garbage collector
+            gc.collect()

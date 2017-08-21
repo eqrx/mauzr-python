@@ -94,7 +94,7 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         self._i2c.write(self._address, [0xf4, 0x25])
         self._receive_task.enable()
 
-    @mauzr.hardware.driver.guard(OSError)
+    @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _receive(self):
         """ Finalize reading and publish values. """
 
