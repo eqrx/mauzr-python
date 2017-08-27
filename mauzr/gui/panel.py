@@ -1,7 +1,7 @@
 """ GUI panels. """
 __author__ = "Alexander Sowitzki"
 
-import pygame
+import pygame # pylint: disable=import-error
 from mauzr.gui.vector import Vector
 from mauzr.gui.elements import Indicator, AgentIndicator
 from mauzr.gui.elements import ToggleController, SimpleController
