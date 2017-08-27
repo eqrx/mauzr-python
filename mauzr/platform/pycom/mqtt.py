@@ -101,7 +101,7 @@ class Client:
             # Set the message callback
             self._mqtt.set_callback(self._on_message)
             # Perform connect
-            self._mqtt.connect(clean_session=True)
+            self._mqtt.connect()
             # Connect done, reduce timeout of socket
             self._mqtt.sock.settimeout(1)
             # Pulish presence message
