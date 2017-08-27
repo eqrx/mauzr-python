@@ -3,7 +3,6 @@ __author__ = "Alexander Sowitzki"
 
 import enum
 import pygame # pylint: disable=import-error
-from mauzr.gui.vector import Vector
 
 class BaseElement:
     """ An visible element inside a GUI.
@@ -20,6 +19,7 @@ class BaseElement:
         screen = pygame.display.get_surface()
         self._rect = pygame.Rect(location.values, size.values)
         self._surface = screen.subsurface(self._rect)
+        self.state_acknowledged = True
 
     def _on_click(self):
         """ Called when the element is clicked. """
@@ -105,7 +105,7 @@ class ColorStateMixin:
     def __init__(self, conditions):
         self._state_conditions = conditions
         self._state = ColorState.UNKNOWN
-        self._state_acknowledged = True
+        self.state_acknowledged = True
 
     def _update_state(self, value):
         """ The conditions functions are called in order of the state
@@ -122,7 +122,7 @@ class ColorStateMixin:
     def _color(self):
         # Take first element as default
         i = 0
-        if not self._state_acknowledged:
+        if not self.state_acknowledged:
             # Cycle if not acknowledged
             t = pygame.time.get_ticks()
             i = t // self.COLOR_DISPLAY_DURATION % len(self._state.value)
@@ -168,49 +168,3 @@ class TextMixin:
         """ Inject text into element. """
 
         self._surface.blit(self._text_surf, self._text_rect)
-
-
-def pygame_loop(core, elements, fps=10):
-    """ Perform the loop of pygame.
-
-    :param core: Core instance.
-    :type core: object
-    :param elements: Elements to display.
-    :type elements: mauzr.gui.Element
-    :param fps: Refresh rate of the screen.
-    :type fps: float
-    """
-
-    while not core.shutdown_event.is_set():
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                # Return on quit
-                pygame.quit()
-                return
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                # Inform elements when mouse if clicked
-                pos = pygame.mouse.get_pos()
-                [indicator.on_mouse(pos) for indicator in elements]
-
-        # Draw each tick
-        [indicator.draw() for indicator in elements]
-
-        pygame.display.flip()
-        pygame.time.wait(1000//fps)
-
-def table_layout(offset, row, column, cell_size):
-    """ Calculate position of an element in a grid layout.
-
-    :param offset: Offset of the first element from the display borders.
-    :type offset: mauzr.gui.Vector
-    :param row: Row of the element.
-    :type row: int
-    :param column: Column of the element.
-    :type column: int
-    :param cell_size: Size of a cell.
-    :type cell_size: mauzr.gui.Vector
-    :returns: Position (center) of the element.
-    :rtype: mauzr.gui.Vector
-    """
-
-    return offset + Vector(cell_size[0] * column, cell_size[1] * row)

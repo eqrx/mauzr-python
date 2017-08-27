@@ -38,16 +38,16 @@ class AgentIndicator(ColorStateMixin, TextMixin, RectBackgroundMixin,
     def _on_connection_change(self, status):
         # In any case, connection change means the value in invalid
         self._update_state(None)
-        self._state_acknowledged = False
+        self.state_acknowledged = False
 
     def _on_state_change(self, _topic, value):
         # Update state
         self._update_state(value)
-        self._state_acknowledged = False
+        self.state_acknowledged = False
 
     def _on_click(self):
         # Assume click means acknowledge
-        self._state_acknowledged = True
+        self.state_acknowledged = True
 
 
 class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
@@ -55,25 +55,25 @@ class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
 
     :param core: Core instance.
     :type core: object
-    :param topic: Topic containing the presence information.
+    :param topic: Topic to monitor.
     :type topic: str
     :param serializer: Serializer for the topic.
     :type serializer: object
-    :param label: Label to prepend the value with. Is separated from
+    :param label: Label to prepend the value with. Is separated from \
                  it by ": ".
     :type label: str
-    :param fmt: Format to use for displaying the topic value. Is expected to
-                be in curly braces and with implicit position reference.
+    :param fmt: Format to use for displaying the topic value. Is expected to \
+                be in curly braces and with implicit position reference. \
                 Will be concatenated to the internal format.
     :type fmt: str
-    :param state_conditions: Dictionary mapping :class:`mauzr.gui.ColorState`
-                             to functions. The function receives one parameter
-                             and should return True if the value indicates
+    :param state_conditions: Dictionary mapping :class:`mauzr.gui.ColorState` \
+                             to functions. The function receives one parameter \
+                             and should return True if the value indicates \
                              the mapped state.
     :type state_conditions: dict
-    :param timeout: If not None, an update of the topic is expected each
-                    ``timeout`` milliseconds. If a timeout occurs,
-                    the indicator is going into
+    :param timeout: If not None, an update of the topic is expected each \
+                    ``timeout`` milliseconds. If a timeout occurs, \
+                    the indicator is going into \
                     :class:`mauzr.gui.ColorState.ERROR`.
     :type timeout: int
     :param location: Center of the element.
@@ -90,7 +90,7 @@ class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
         state_conditions[ColorState.UNKNOWN] = lambda v: v is None
         ColorStateMixin.__init__(self, state_conditions)
 
-        self._state_acknowledged = True
+        self.state_acknowledged = True
         self._fmt = fmt
         self._label = label
         self._timer = None
@@ -103,7 +103,7 @@ class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
     def _on_timeout(self):
         # No update, complain
         self._state = ColorState.ERROR
-        self._state_acknowledged = False
+        self.state_acknowledged = False
 
     def _on_message(self, _topic, value):
         self._update_state(value)
@@ -115,7 +115,7 @@ class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
 
     def _on_click(self):
         # Assume click means acknowledge
-        self._state_acknowledged = True
+        self.state_acknowledged = True
 
 class SimpleController(TextMixin, RectBackgroundMixin, BaseElement):
     """ Controller for sending a value when clicked.
@@ -143,7 +143,7 @@ class SimpleController(TextMixin, RectBackgroundMixin, BaseElement):
 
     COLOR_READY = (0, 150, 0)
     """ Color that indicates a tap sends a value. """
-    COLOR_NOT_READY = (150, 0, 0)
+    COLOR_NOT_READY = (100, 100, 100)
     """ Color that indicates the condition is not met. """
 
     def __init__(self, core, send_topic, cond_topic, qos, retain, payload,
