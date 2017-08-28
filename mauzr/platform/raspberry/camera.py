@@ -26,7 +26,8 @@ class Driver:
         - *flip*: Tuple of bools if to do vflip or hflip.
         - *framerate*: Number of frames to capture per second (``int``).
         - *address*: I2C address of the device (``int``).
-        - *interval*: Output frequency in milliseconds (``int``).
+        - *framerate*: Normal output frequency in milliseconds (``int``).
+        - *slowinterval*: Slow frequency in milliseconds (``int``).
 
     **Output topics:**
 
@@ -46,16 +47,17 @@ class Driver:
         self._mqtt = core.mqtt
         self._base = cfg["base"]
         core.mqtt.setup_publish(self._base + "live", None, 0)
-        core.mqtt.setup_publish(self._base + "0.1fps", None, 0)
+        core.mqtt.setup_publish(self._base + "slow", None, 0)
 
-        core.scheduler(self._publish_slow, 10000, single=False).enable()
+        core.scheduler(self._publish_slow, cfg["slowinterval"],
+                       single=False).enable()
         self._image = None
 
     def _publish_slow(self):
         image = self._image
         if image:
             self._image = None
-            self._mqtt.publish(self._base + "0.1fps", image, False)
+            self._mqtt.publish(self._base + "slow", image, False)
 
     def __call__(self):
         # Capture and publish frames.
