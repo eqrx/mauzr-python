@@ -57,7 +57,7 @@ class Driver:
         image = self._image
         if image:
             self._image = None
-            self._mqtt.publish(self._base + "slow", image, False)
+            self._mqtt.publish(self._base + "slow", image, True)
 
     def __call__(self):
         # Capture and publish frames.
