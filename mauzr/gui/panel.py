@@ -89,9 +89,8 @@ class Table:
         :rtype: mauzr.gui.elements.AgentIndicator
         """
 
-        cell_location = self.layout(position)
         element = AgentIndicator(self._core, topic,
-                                 cell_location, self._draw_size)
+                                 *self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
@@ -125,9 +124,9 @@ class Table:
         :rtype: mauzr.gui.elements.Indicator
         """
 
-        cell_location = self.layout(position)
-        element = Indicator(self._core, topic, ser, label, fmt, conditions,
-                            timeout, cell_location, self._draw_size)
+        element = Indicator(self._core, topic, ser,
+                            label, fmt, conditions, timeout,
+                            *self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
@@ -149,9 +148,8 @@ class Table:
         :rtype: mauzr.gui.elements.ToggleController
         """
 
-        cell_location = self.layout(position)
         element = ToggleController(self._core, topic, qos, retain, label,
-                                   cell_location, self._draw_size)
+                                   *self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
@@ -178,21 +176,24 @@ class Table:
         :rtype: mauzr.gui.elements.ToggleController
         """
 
-        cell_location = self.layout(position)
         element = SimpleController(self._core, send_topic, cond_topic, qos,
                                    retain, payload, label,
-                                   cell_location, self._draw_size)
+                                   *self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
-    def layout(self, position):
+    def layout(self, position, extend=(1, 1)):
         """ Assign pixel position to table position.
 
         :param position: Cell postion of the elemnt (row, column as ints).
         :type position: tuple
-        :returns: Pixel position as vector.
-        :rtype: mauzr.gui.vector.Vector
+        :param extend: Amount of cells to fill.
+        :type extend: Vector
+        :returns: Pixel offset and draw size as as vectors.
+        :rtype: tuple
         """
 
-        return Vector(self._cell_size[0] * position[1],
-                      self._cell_size[1] * position[0])
+        offset = self._cell_size * reversed(position)
+        size = self._draw_size * reversed(extend)
+
+        return offset, size

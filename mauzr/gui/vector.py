@@ -32,7 +32,9 @@ class Vector:
         return Vector(*[a//b for a, b in zip(self.values, other)])
 
     def __mul__(self, other):
-        return Vector(*[a*other for a in self.values])
+        if isinstance(other, (int, float)):
+            return Vector(*[a*other for a in self.values])
+        return Vector(*[a*b for a, b in zip(self.values, other)])
 
     def __repr__(self):
         return f"mauzr.gui.vector.Vector(*{self.values})"
