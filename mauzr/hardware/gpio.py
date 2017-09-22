@@ -72,9 +72,9 @@ def link_input(core, cfgbase="gpioin", **kwargs):
 
     cfg = core.config[cfgbase]
     cfg.update(kwargs)
-    core.mqtt.setup_publish(cfg["topic"], mauzr.platform.serializer.Bool,
-                            cfg["qos"])
     core.gpio.setup_input(cfg["pin"], cfg["edge"], cfg["pull"])
+    core.mqtt.setup_publish(cfg["topic"], mauzr.platform.serializer.Bool,
+                            cfg["qos"], default=core.gpio[cfg["pin"]])
     current = None
     last = None
 
