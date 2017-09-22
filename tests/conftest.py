@@ -61,7 +61,7 @@ class MQTTMockup:
 
         self._expected.append((self._Type.SUB,) + (topic, serializer, qos))
 
-    def set(self, topic, serializer, qos):
+    def set(self, topic, serializer, qos, default):
         """ Expect a :func:`mauzr.platform.mqtt.setup_publish` call.
 
         :param topic: MQTT topic.
@@ -70,9 +70,12 @@ class MQTTMockup:
         :type serializer: object
         :param qos: QoS level.
         :type qos: int
+        :param default: Default value to publish on new session.
+        :type default: object
         """
 
-        self._expected.append((self._Type.SET,) + (topic, serializer, qos))
+        self._expected.append((self._Type.SET,) +
+                              (topic, serializer, qos, default))
 
     def exp(self, topic, payload, retain):
         """ Expect a :func:`mauzr.platform.mqtt.publish` call.
@@ -99,10 +102,10 @@ class MQTTMockup:
         self._expected.append((self._Type.INJ,) + (topic, payload))
 
     @interaction
-    def setup_publish(self, *args):
+    def setup_publish(self, topic, serializer, qos, default=None):
         """ Mimic :func:`mauzr.platform.mqtt.setup_publish` and log event. """
 
-        self._actual.append((self._Type.SET,) + tuple(args))
+        self._actual.append((self._Type.SET, topic, serializer, qos, default))
 
     @interaction
     def subscribe(self, *args):
@@ -181,7 +184,7 @@ def merge():
         deser = object()
         ser = object()
         qos = 1
-        dflt = 8
+        dflt = [8, 43, 15]
 
     yield _MergeConfig
 
@@ -195,7 +198,7 @@ def split():
         deser = object()
         ser = object()
         qos = 1
-        dflt = 8
+        dflt = [8, 43, 15]
 
     yield _SplitConfig
 

@@ -14,8 +14,7 @@ def test_aggregate_run(core, merge):
     c = merge
     assert len(c.in_tpcs) == 3
 
-    core.mqtt.set(c.out_tpc, c.ser, c.qos)
-    core.mqtt.exp(c.out_tpc, -1, True)
+    core.mqtt.set(c.out_tpc, c.ser, c.qos, c.dflt)
     [core.mqtt.sub(topic, c.deser, c.qos)
      for topic in c.in_tpcs]
 
@@ -30,7 +29,7 @@ def test_aggregate_run(core, merge):
                               c.in_tpcs[2]: 4}, True)
 
     mauzr.data.aggregate(core, zip(c.in_tpcs, [c.deser] * 3),
-                         lambda vs, t, v: vs.copy(), -1, c.out_tpc,
+                         lambda vs, t, v: vs.copy(), c.dflt, c.out_tpc,
                          c.ser, c.qos)
 
     with core:
@@ -42,8 +41,8 @@ def test_split_run(core, split):
     c = split
     assert len(c.out_tpcs) == 3
 
-    [core.mqtt.set(topic, c.ser, c.qos) for topic in c.out_tpcs]
-    [core.mqtt.exp(topic, c.dflt, True) for topic in c.out_tpcs]
+    [core.mqtt.set(topic, c.ser, c.qos, c.dflt) for topic in c.out_tpcs]
+    #[core.mqtt.exp(topic, c.dflt, True) for topic in c.out_tpcs]
     core.mqtt.sub(c.in_tpc, c.deser, c.qos)
 
     core.mqtt.inj(c.in_tpc, [1, 2, 4])
@@ -63,15 +62,15 @@ def test_merge_run(core, merge):
     c = merge
     assert len(c.in_tpcs) == 3
 
-    core.mqtt.set(c.out_tpc, c.ser, c.qos)
-    core.mqtt.exp(c.out_tpc, [c.dflt] * len(c.in_tpcs), True)
+    core.mqtt.set(c.out_tpc, c.ser, c.qos, c.dflt)
+    core.mqtt.exp(c.out_tpc, c.dflt, True)
     [core.mqtt.sub(topic, c.deser, c.qos) for topic in c.in_tpcs]
 
 
     core.mqtt.inj(c.in_tpcs[0], 1)
-    core.mqtt.exp(c.out_tpc, [1, c.dflt, c.dflt], True)
+    core.mqtt.exp(c.out_tpc, [1, c.dflt[1], c.dflt[2]], True)
     core.mqtt.inj(c.in_tpcs[1], 2)
-    core.mqtt.exp(c.out_tpc, [1, 2, c.dflt], True)
+    core.mqtt.exp(c.out_tpc, [1, 2, c.dflt[2]], True)
     core.mqtt.inj(c.in_tpcs[2], 4)
     core.mqtt.exp(c.out_tpc, [1, 2, 4], True)
 
@@ -87,7 +86,7 @@ def test_delay_run(core, delay):
 
     c = delay
 
-    core.mqtt.set(c.out_tpc, c.ser, c.qos)
+    core.mqtt.set(c.out_tpc, c.ser, c.qos, None)
     core.mqtt.sub(c.in_tpc, c.deser, c.qos)
     core.mqtt.inj(c.in_tpc, 3)
     core.mqtt.exp(c.out_tpc, c.pay, c.ret)
@@ -110,9 +109,9 @@ def test_convert_run(core, conversion):
 
     c = conversion
 
-    core.mqtt.set(c.out_tpc, c.ser, c.qos)
-    core.mqtt.exp(c.out_tpc, c.dflt, c.ret)
+    core.mqtt.set(c.out_tpc, c.ser, c.qos, c.dflt)
     core.mqtt.sub(c.in_tpc, c.deser, c.qos)
+    #core.mqtt.exp(c.out_tpc, c.dflt, c.ret)
     core.mqtt.inj(c.in_tpc, 3)
     core.mqtt.exp(c.out_tpc, 7, c.ret)
     core.mqtt.inj(c.in_tpc, 2)

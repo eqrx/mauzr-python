@@ -50,9 +50,7 @@ def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
     values = {}
     last = None
     log = core.logger(f"<aggregate@{out_topic}>")
-    core.mqtt.setup_publish(out_topic, serializer, qos)
-    if default is not None:
-        core.mqtt.publish(out_topic, default, True)
+    core.mqtt.setup_publish(out_topic, serializer, qos, default)
 
     def _on_message(in_topic, value):
         nonlocal last
@@ -138,10 +136,8 @@ def split(core, in_topic, out_topics, deserializer, serializer, default, qos):
     """
 
     log = core.logger(f"<split@{in_topic}>")
-    [core.mqtt.setup_publish(topic, serializer, qos)
-     for topic in out_topics]
-    [core.mqtt.publish(topic, default, True)
-     for topic in out_topics]
+    [core.mqtt.setup_publish(topic, serializer, qos, default)
+     for topic, dflt in zip(out_topics, default)]
 
     def _on_message(_topic, values):
         log.debug("Received: %s", values)
@@ -167,6 +163,7 @@ def merge(core, in_topics, out_topic, deserializer, serializer, default, qos):
     :type qos: int
     :param default: Default input value.
     :type default: object
+    :raise ValueError: If length if in_topics does not match default.
 
     **Required core units**:
 
@@ -174,8 +171,10 @@ def merge(core, in_topics, out_topic, deserializer, serializer, default, qos):
     """
 
     log = core.logger(f"<merge@{out_topic}>")
-    values = [default] * len(in_topics)
-    core.mqtt.setup_publish(out_topic, serializer, qos)
+    values = list(default)
+    if len(values) != len(in_topics):
+        raise ValueError("Need as many default values as input topics")
+    core.mqtt.setup_publish(out_topic, serializer, qos, values)
     core.mqtt.publish(out_topic, values, True)
 
     def _on_message(topic, value):
@@ -217,9 +216,7 @@ def convert(core, mapper, retain, default,
     """
 
     log = core.logger(f"<convert@{in_topic}→{out_topic}>")
-    core.mqtt.setup_publish(out_topic, serializer, qos)
-    if default is not None:
-        core.mqtt.publish(out_topic, default, retain)
+    core.mqtt.setup_publish(out_topic, serializer, qos, default)
 
     def _on_message(topic, value):
         ret = mapper(value)

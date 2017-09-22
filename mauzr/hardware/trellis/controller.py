@@ -54,20 +54,23 @@ class Controller:
         self._base = cfg["base"]
         self._button_topics = cfg["button_topics"]
         self._led_topics = cfg["led_topics"]
+        self._led_default = cfg["led_default"]
         if len(self._button_topics) != 16 or len(self._led_topics) != 16:
             raise ValueError("16 topics for each leds and buttons needed.")
+        if len(self._led_default) != 16:
+            raise ValueError("16 default values for leds needed.")
 
         self._mqtt = core.mqtt
         self._button_values = [None] * 16
-        self._led_values = [False] * 16
-        core.mqtt.setup_publish(self._base + "leds", None, 0)
+        self._led_values = list(cfg["led_default"])
+        core.mqtt.setup_publish(self._base + "leds", None, 0,
+                                default=self._led_bytes())
         core.mqtt.subscribe(self._base + "buttons", self._on_buttons, None, 0)
         [core.mqtt.subscribe(topic, self._on_led,
                              mauzr.platform.serializer.Bool, 0)
          for topic in self._led_topics if topic is not None]
         [core.mqtt.setup_publish(topic, mauzr.platform.serializer.Bool, 0)
          for topic in self._button_topics if topic is not None]
-        self._publish()
 
     def _on_buttons(self, _topic, buttons):
         for topic, i, lutv in zip(self._button_topics, range(0, 16),
@@ -89,9 +92,9 @@ class Controller:
                     self._led_values[i] = val
                     changed = True
         if changed:
-            self._publish()
+            self._mqtt.publish(self._base + "leds", self._led_bytes(), True)
 
-    def _publish(self):
+    def _led_bytes(self):
         buf = [0] * 8
         for i, value in zip(range(0, 16), self._led_values):
             entry = 1 << (Controller.LED_LUT[i] & 0xf)
@@ -104,5 +107,4 @@ class Controller:
         for entry in buf:
             data.append(entry & 0xff)
             data.append(entry >> 8)
-
-        self._mqtt.publish(self._base + "leds", bytes(data), True)
+        return bytes(data)

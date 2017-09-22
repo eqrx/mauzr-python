@@ -49,7 +49,7 @@ class Client:
 
         user = kwargs["user"]
         self._status_topic = "{}agents/{}".format(self._base, user)
-        self.client.reinitialise(client_id=user, clean_session=True)
+        self.client.reinitialise(client_id=user, clean_session=False)
         self.client.username_pw_set(username=user, password=kwargs["password"])
         self.client.will_set(self._status_topic, payload=b'\x00'.decode(),
                              qos=2, retain=True)
@@ -79,21 +79,17 @@ class Client:
 
         self.manager.on_disconnect(*details)
 
-    def _on_connect(self, *details):
+    def _on_connect(self, _client, _userdata, flags, _rc):
         # Indicate that the client connected to the broker.
-
         self.client.publish(self._status_topic, payload=b'\x01'.decode(),
                             qos=2, retain=True)
-        self.manager.on_connect(*details)
+        self.manager.on_connect(flags["session present"])
 
     def _on_message(self, client, userdata, message):
         # Handle messages received via the mqtt broker.
 
-        # Fetch information and dispatch callback
-        topic = message.topic
-        payload = message.payload
-        self.manager.on_message(topic, payload)
-
+        # Dispatch callback
+        self.manager.on_message(message.topic, message.payload, message.retain)
 
     def subscribe(self, topic, qos):
         """ Subscribe to a topic.

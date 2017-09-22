@@ -55,15 +55,27 @@ class Manager:
         self.mqtt.set_host(**self._hosts[self._current_config])
         self._current_config = min(self._current_config+1, len(self._hosts)-1)
 
-    def on_connect(self, *details):
-        """ Subscribe all subscriptions. """
+    def on_connect(self, session_present):
+        """ Subscribe all subscriptions.
+
+        :param session_present: True if the MQTT session is already created.
+        :type session_present: bool
+        """
 
         self.connected = True
         self._host_task.disable()
         self._log.info("Connected")
-        # Resubscribe subscriptions after reconnect
+
         for config in self._subscriptions.values():
             self.mqtt.subscribe(config["topic"], config["qos"])
+
+        if not session_present:
+            self._log.warning("Session missing, publishing default values")
+
+            # Publish default values
+            for c in self._publications.values():
+                if c["default"] is not None:
+                    self.mqtt.publish(c["topic"], c["default"], c["qos"], True)
 
         for delayed in self._delayed_publishes:
             self.publish(*delayed)
@@ -80,13 +92,15 @@ class Manager:
 
         [listener(False) for listener in self.connection_listeners]
 
-    def on_message(self, topic, payload):
+    def on_message(self, topic, payload, retained):
         """ Handle messages received via the mqtt broker.
 
         :param topic: Topic of the message.
         :type topic: str
         :param payload: Payload of the message.
         :type payload: object
+        :param retained: If True this is a retained message.
+        :type retained: bool
         :raises Exception: Errors of callback.
         """
 
@@ -166,7 +180,7 @@ class Manager:
 
         config["callbacks"].append(callback)
 
-    def setup_publish(self, topic, serializer, qos):
+    def setup_publish(self, topic, serializer, qos, default=None):
         """ Prepare publishing to a topic.
 
         :param topic: Topic to publish to. May not contain wildcards.
@@ -176,23 +190,27 @@ class Manager:
         :type serializer: object
         :param qos: QoS level to use.
         :type qos: int
-        :raises ValueError: If topic is invalid or ist already configured
+        :param default: Value to publish on new sessions. May be None.
+        :type default: object
+        :raises ValueError: If topic is invalid or is already configured
                             in a conflicting manner.
         """
 
         if "#" in topic or "+" in topic:
             raise ValueError("Please do not use # or + in topic")
 
-        config = None
+        if default is not None and serializer is not None:
+            default = serializer.pack(default)
+        config = {"topic": topic, "serializer": serializer, "qos": qos,
+                  "default": default}
+
         if topic in self._publications:
             # Topic already used, compare configuration.
-            config = self._publications[topic]
-            if qos != config["qos"] or serializer != config["serializer"]:
+            if config != self._publications[topic]:
                 raise ValueError("Topic is already configured "
                                  "with other settings")
         else:
             # Topic new, create config
-            config = {"topic": topic, "qos": qos, "serializer": serializer}
             self._publications[topic] = config
 
     def publish(self, topic, payload, retain):

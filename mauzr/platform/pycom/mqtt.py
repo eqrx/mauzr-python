@@ -101,7 +101,7 @@ class Client:
             # Set the message callback
             self._mqtt.set_callback(self._on_message)
             # Perform connect
-            self._mqtt.connect()
+            session_present = self._mqtt.connect(clean_session=False)
             # Connect done, reduce timeout of socket
             self._mqtt.sock.settimeout(1)
             # Pulish presence message
@@ -115,14 +115,12 @@ class Client:
             self._connect_task.enable()
             return
 
-        self._log.info("success")
-
         # Enable tasks
         self._ping_task.enable(instant=True)
         self._manage_task.enable(instant=True)
 
         # Inform manager
-        self.manager.on_connect()
+        self.manager.on_connect(session_present)
 
     def _on_disconnect(self):
         # Called on client disconnect.
@@ -157,11 +155,11 @@ class Client:
         self._log.error("Disconnect due to timeout")
         self._on_disconnect()
 
-    def _on_message(self, topic, message):
+    def _on_message(self, topic, message, retained):
         # Called when a message was received.
 
         # Call manager
-        self.manager.on_message(topic.decode(), message)
+        self.manager.on_message(topic.decode(), message, retained)
         # Clean up
         gc.collect()
 
