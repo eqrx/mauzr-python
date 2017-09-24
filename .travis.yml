@@ -3,8 +3,8 @@ python:
   - "3.6"
 cache: pip
 install:
-script: 
-- ln -s /home/travis/.cache/pip /home/travis/build/eqrx/mauzr/.eggs
+script:
+- ln -s $HOME/.cache/pip $TRAVIS_BUILD_DIR/mauzr/.eggs
 - python setup.py pytest build_sphinx bdist_wheel sdist
 - touch build/sphinx/html/.nojekyll
 - echo mauzr.eqrx.net > build/sphinx/html/CNAME
