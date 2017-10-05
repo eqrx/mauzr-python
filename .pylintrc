@@ -23,7 +23,7 @@ score=yes
 
 [REFACTORING]
 
-max-nested-blocks=5
+max-nested-blocks=6
 
 [MISCELLANEOUS]
 
