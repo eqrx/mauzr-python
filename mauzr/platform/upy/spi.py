@@ -1,10 +1,10 @@
-""" SPI for pycom systems. """
+""" SPI for upy systems. """
 __author__ = "Alexander Sowitzki"
 
 import machine # pylint: disable=import-error
 
 class Bus:
-    """ Access SPI on pycom.
+    """ Access SPI on upy.
 
     :param baudrate: Baudrate to use for the bus.
     :type baudrate: int

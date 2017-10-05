@@ -1,4 +1,4 @@
-""" Sigfox access for pycom. """
+""" Sigfox access for upy. """
 __author__ = "Alexander Sowitzki"
 
 import logging
@@ -6,7 +6,7 @@ import usocket # pylint: disable=import-error
 import network # pylint: disable=import-error
 
 class Manager:
-    """ Manage the Sigfox module on pycom platforms. """
+    """ Manage the Sigfox module on upy platforms. """
 
     def __init__(self):
         self._log = logging.getLogger("<Sigfox>")

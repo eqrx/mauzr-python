@@ -28,7 +28,7 @@ class GPIO:
 
         :param name: ID of the pin.
         :type name: str
-        :param edge: Edges to inform listeners about. May be "none", "rising",
+        :param edge: Edges to inform listeners about. May be "none", "rising", \
                      "falling" or "both".
         :type edge: str
         :param pullup: Pull mode of the pin. May be "none", "up" or "down".

@@ -13,5 +13,4 @@ Platform
    cpython/index
    linux/index
    raspberry/index
-   pycom/index
    upy/index

@@ -34,6 +34,7 @@ class Client:
         self._publications = {}
 
         self._keepalive = 30
+        core.add_context(self)
 
     def __enter__(self):
         # Start the connector.

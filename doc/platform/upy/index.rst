@@ -1,4 +1,4 @@
-uPy
+upy
 ^^^^^
 
 .. automodule:: mauzr.platform.upy
@@ -9,4 +9,11 @@ uPy
 .. toctree::
    :maxdepth: 2
 
+   scheduler
+   mqtt
    wlan
+   gpio
+   i2c
+   spi
+   sigfox
+   led

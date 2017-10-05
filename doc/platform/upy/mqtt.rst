@@ -1,7 +1,7 @@
 MQTT
 """"
 
-.. automodule:: mauzr.platform.pycom.mqtt
+.. automodule:: mauzr.platform.upy.mqtt
     :noindex:
     :members:
     :show-inheritance:

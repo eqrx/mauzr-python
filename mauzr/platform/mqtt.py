@@ -43,13 +43,15 @@ class Manager:
         self.connection_listeners = []
         self._delayed_publishes = []
 
+        core.add_context(self)
+
+
     def __enter__(self):
         self.mqtt.set_host(**self._hosts[0])
-        self.mqtt.__enter__()
         return self
 
     def __exit__(self, *exc_details):
-        return self.mqtt.__exit__(*exc_details)
+        pass
 
     def _next_host(self):
         self.mqtt.set_host(**self._hosts[self._current_config])
@@ -83,11 +85,11 @@ class Manager:
 
         [listener(True) for listener in self.connection_listeners]
 
-    def on_disconnect(self, *details):
+    def on_disconnect(self, reason=None):
         """ React to disconnections from the broker. """
 
         self.connected = False
-        self._log.warning("Disconnected")
+        self._log.warning("Disconnected: %s", reason)
         self._host_task.enable(instant=True)
 
         [listener(False) for listener in self.connection_listeners]
@@ -227,12 +229,16 @@ class Manager:
         :raises Exception: If paho fails.
         """
 
-        if not self.connected:
-            self._delayed_publishes.append((topic, payload, retain))
+
 
         config = self._publications[topic]
-        self._log.debug("Publishing %s: %s", topic, payload)
+        if not self.connected:
+            if config["qos"] > 0:
+                self._log.debug("Delaying publish %s: %s", topic, payload)
+                self._delayed_publishes.append((topic, payload, retain))
+            return
 
+        self._log.debug("Publishing %s: %s", topic, payload)
         if config["serializer"] is not None:
             try:
                 payload = config["serializer"].pack(payload)

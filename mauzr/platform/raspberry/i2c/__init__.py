@@ -12,6 +12,8 @@ from . import _types
 class Bus:
     """ Manage an I2C bus.
 
+    :param core: Core instance.
+    :type core: object
     :param path: Path to the device file.
     :type path: str
     """
@@ -21,11 +23,12 @@ class Bus:
     WRITE = 1
     """ Indicate a write action in a transaction. """
 
-    def __init__(self, path):
+    def __init__(self, core, path):
         self.current_address = None
         self.device = path
         self.lock = threading.RLock()
         self.fd = None
+        core.add_context(self)
 
     @staticmethod
     def base_address(address):

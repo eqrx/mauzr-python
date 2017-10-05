@@ -1,7 +1,7 @@
-I2C
-"""
+Sigfox
+""""""
 
-.. automodule:: mauzr.platform.pycom.i2c
+.. automodule:: mauzr.platform.upy.sigfox
     :members:
     :show-inheritance:
     :undoc-members:

@@ -110,8 +110,7 @@ class Core:
 
         try:
             for subject in self._contexts:
-                if hasattr(subject, "__enter__"):
-                    self._stack.enter_context(subject)
+                self._stack.enter_context(subject)
             if self.scheduler_thread is not False:
                 thread = threading.Thread(target=self._run_scheduler,
                                           name="scheduler")
@@ -151,11 +150,9 @@ class Core:
         mqtt = Client(self, cfgbase, **kwargs)
         mqtt.manager = self.mqtt
         self.mqtt.mqtt = mqtt
-        self._contexts.append(self.mqtt)
 
     def _setup_scheduler(self):
         # Setup scheduler.
 
         from mauzr.platform.cpython.scheduler import Scheduler
         self.scheduler = Scheduler(self.shutdown_event)
-        self._contexts.append(self.scheduler)

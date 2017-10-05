@@ -1,7 +1,7 @@
 Scheduler
 """""""""
 
-.. automodule:: mauzr.platform.pycom.scheduler
+.. automodule:: mauzr.platform.upy.scheduler
     :members:
     :show-inheritance:
     :undoc-members:

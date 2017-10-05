@@ -186,6 +186,5 @@ autodoc_mock_imports = [
 ]
 
 modindex_common_prefix = ['mauzr.', 'mauzr.hardware.', 'mauzr.util.',
-                          'mauzr.platform.', 'mauzr.platform.pycom.',
-                          'mauzr.platform.linux.', 'mauzr.platform.posix.',
-                          'mauzr.platform.pycom.']
+                          'mauzr.platform.', 'mauzr.platform.upy.',
+                          'mauzr.platform.linux.', 'mauzr.platform.posix.']

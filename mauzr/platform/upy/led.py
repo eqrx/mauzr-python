@@ -1,7 +1,10 @@
 """ Provide pycom specific functions. """
 __author__ = "Alexander Sowitzki"
 
-import pycom # pylint: disable=import-error
+try:
+    import pycom # pylint: disable=import-error
+except ImportError:
+    pass
 
 class LED:
     """ Manage the status LED on the board.
@@ -32,8 +35,10 @@ class LED:
     """ Color for system init. """
 
     def __init__(self, core):
-        # Disable default heartbeat
-        pycom.heartbeat(False)
+        self.pycom = core
+        if self.pycom:
+            # Disable default heartbeat
+            pycom.heartbeat(False)
         # Default state is init
         self._state = self.INIT
         self.simple_set(self._state)
@@ -77,12 +82,12 @@ class LED:
         # Schedule reset
         self._reset_task.enable()
 
-    @staticmethod
-    def simple_set(color):
+    def simple_set(self, color):
         """ Set the color.
 
         :param color: Color to set.
         :type color: int
         """
 
-        pycom.rgbled(color)
+        if self.pycom:
+            pycom.rgbled(color)

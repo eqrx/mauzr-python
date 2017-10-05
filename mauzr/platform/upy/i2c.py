@@ -29,6 +29,8 @@ class Bus:
         self.pins = cfg.get("pins", ("P9", "P10"))
         self.i2c = machine.I2C(0)
 
+        core.add_context(self)
+
     def __enter__(self):
         # Init bus.
 

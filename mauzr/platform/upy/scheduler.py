@@ -1,4 +1,4 @@
-""" Scheduler for pycom systems. """
+""" Scheduler for upy systems. """
 __author__ = "Alexander Sowitzki"
 
 import gc # pylint: disable=import-error
@@ -6,7 +6,7 @@ import utime # pylint: disable=import-error
 import mauzr.platform.scheduler
 
 class Task(mauzr.platform.scheduler.Task):
-    """ :class:`mauzr.platform.scheduler.Task` for pycom. """
+    """ :class:`mauzr.platform.scheduler.Task` for upy. """
 
     @staticmethod
     def _now():
@@ -14,7 +14,7 @@ class Task(mauzr.platform.scheduler.Task):
         return utime.ticks_ms()
 
 class Scheduler(mauzr.platform.scheduler.Scheduler):
-    """ Scheduler for the pycom platform. """
+    """ Scheduler for the upy platform. """
 
     def __call__(self, *args, **kwargs):
         """ Create a new task.

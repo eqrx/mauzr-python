@@ -30,5 +30,4 @@ class Core(mauzr.platform.linux.Core):
         """
 
         from mauzr.platform.raspberry.i2c import Bus
-        self.i2c = Bus(*args, **kwargs)
-        self.add_context(self.i2c)
+        self.i2c = Bus(self, *args, **kwargs)

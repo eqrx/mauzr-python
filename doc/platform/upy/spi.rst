@@ -1,7 +1,7 @@
 SPI
 """
 
-.. automodule:: mauzr.platform.pycom.spi
+.. automodule:: mauzr.platform.upy.spi
     :members:
     :show-inheritance:
     :undoc-members:
