@@ -25,21 +25,23 @@ class RDDLogger:
     **Configuration:**
 
         - **topics** (:class:`tuple`) - Topics to record.
+
           - **topic** (:class:`str`) - Input topic.
           - **qos** (:class:`int`) - Subscribe QoS.
           - **format** (:class:`str`) - Struct format of the topic.
           - **path** (:class:`str`) - Storage path for database.
           - **stepsize** (:class:`str`) - Time in seconds between logged values.
           - **timeout** (:class:`str`) - Time in seconds after topic is \
-              considered timed out.
+            considered timed out.
           - **valuerange** (:class:`tuple`) - Mininum and maxium values \
-              to store.
+            to store.
           - **topic** (:class:`str`) - Input topic.
           - **average** (:class:`dict`) - Average records:
-              - **minratio** (:class:`float`) - Minium ratio of known values \
-                  in range to form average.
-              - **range** (:class:`int`) - Operation range in seconds.
-              - **amount** (:class:`int`) - Amount of results to archive.
+
+            - **minratio** (:class:`float`) - Minium ratio of known values \
+              in range to form average.
+            - **range** (:class:`int`) - Operation range in seconds.
+            - **amount** (:class:`int`) - Amount of results to archive.
 
     **Input topics:**
 

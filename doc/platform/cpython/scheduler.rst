@@ -1,7 +1,7 @@
 Scheduler
 """""""""
 
-.. automodule:: mauzr.platform.posix.scheduler
+.. automodule:: mauzr.platform.cpython.scheduler
     :members:
     :show-inheritance:
     :undoc-members:

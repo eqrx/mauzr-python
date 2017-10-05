@@ -1,7 +1,7 @@
-Config
-""""""
+WLAN
+""""
 
-.. automodule:: mauzr.platform.posix.config
+.. automodule:: mauzr.platform.upy.wlan
     :members:
     :show-inheritance:
     :undoc-members:

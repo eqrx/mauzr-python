@@ -12,3 +12,4 @@ Support package that contains utilities of various kinds like image handling.
    :maxdepth: 2
 
    image
+   rrd

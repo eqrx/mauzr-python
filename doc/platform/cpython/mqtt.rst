@@ -1,7 +1,7 @@
 MQTT
 """"
 
-.. automodule:: mauzr.platform.posix.mqtt
+.. automodule:: mauzr.platform.cpython.mqtt
     :members:
     :show-inheritance:
     :undoc-members:

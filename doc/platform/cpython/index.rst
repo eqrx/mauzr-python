@@ -1,7 +1,7 @@
-Posix
-^^^^^
+CPython
+^^^^^^^
 
-.. automodule:: mauzr.platform.posix
+.. automodule:: mauzr.platform.cpython
     :members:
     :show-inheritance:
     :undoc-members:

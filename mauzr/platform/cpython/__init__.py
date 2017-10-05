@@ -1,4 +1,4 @@
-""" Bootstrap the mauzr agent on posix systems. """
+""" Bootstrap the mauzr agent on cpython systems. """
 __author__ = "Alexander Sowitzki"
 
 import contextlib
@@ -7,7 +7,7 @@ import logging
 import _thread
 
 class Core:
-    """ Manage program components on posix platforms.
+    """ Manage program components on cpython platforms.
 
     The core can either be started directly by calling :func:`run` or
     by using it as a context manager. The first case blocks, the second case
@@ -45,7 +45,7 @@ class Core:
         _thread.interrupt_main()
 
     def _setup_config(self, suit, agent, instance, parser):
-        from mauzr.platform.posix.config import Config
+        from mauzr.platform.cpython.config import Config
         self.config = Config(suit, agent, instance, parser)
         self.config.parse()
 
@@ -135,7 +135,7 @@ class Core:
         """ Setup the MQTT manager and client.
 
         See :class:`mauzr.platform.mqtt.Manager` and
-        :class:`mauzr.platform.posix.mqtt.Client`.
+        :class:`mauzr.platform.cpython.mqtt.Client`.
         Keyword arguments given to this function are passed to both
         constructors.
 
@@ -145,7 +145,7 @@ class Core:
         :type kwargs: dict
         """
 
-        from mauzr.platform.posix.mqtt import Client
+        from mauzr.platform.cpython.mqtt import Client
         from mauzr.platform.mqtt import Manager
         self.mqtt = Manager(self, cfgbase, **kwargs)
         mqtt = Client(self, cfgbase, **kwargs)
@@ -156,6 +156,6 @@ class Core:
     def _setup_scheduler(self):
         # Setup scheduler.
 
-        from mauzr.platform.posix.scheduler import Scheduler
+        from mauzr.platform.cpython.scheduler import Scheduler
         self.scheduler = Scheduler(self.shutdown_event)
         self._contexts.append(self.scheduler)

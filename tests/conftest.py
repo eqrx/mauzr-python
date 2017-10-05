@@ -1,6 +1,6 @@
 """
 .. module:: tests.conftest
-   :platform: posix
+   :platform: cpython
    :synopsis: Fixtures for testing.
 
 .. moduleauthor:: Alexander Sowitzki <dev@eqrx.net>
@@ -9,7 +9,7 @@
 import enum
 import time
 import pytest
-import mauzr.platform.posix
+import mauzr.platform.cpython
 
 def interaction(func):
     """ Decorator for mockups.
@@ -154,8 +154,8 @@ class MQTTMockup:
         assert not self._actual and not self._expected, \
                 "Elements missing: {}".format(self._expected)
 
-class CoreMockup(mauzr.platform.posix.Core):
-    """ Posix core with mockup elements. """
+class CoreMockup(mauzr.platform.cpython.Core):
+    """ CPython core with mockup elements. """
 
     def setup_mqtt(self):
         """ Use :class:`MQTTMockup`. """

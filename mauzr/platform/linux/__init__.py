@@ -1,9 +1,9 @@
 """ Bootstrap the mauzr agent on linux systems. """
 __author__ = "Alexander Sowitzki"
 
-import mauzr.platform.posix
+import mauzr.platform.cpython
 
-class Core(mauzr.platform.posix.Core):
+class Core(mauzr.platform.cpython.Core):
     """ Manage program components on linux platforms.
 
     :param suit: Suit this agent belongs to.
@@ -17,7 +17,8 @@ class Core(mauzr.platform.posix.Core):
     """
 
     def __init__(self, suit, agent, instance=None, parser=None):
-        mauzr.platform.posix.Core.__init__(self, suit, agent, instance, parser)
+        mauzr.platform.cpython.Core.__init__(self, suit, agent,
+                                             instance, parser)
         self.database = None
         if "systemd" in self.config and self.config["systemd"]:
             from mauzr.platform.linux.systemd import Systemd
