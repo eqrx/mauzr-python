@@ -38,7 +38,7 @@ class Pins:
                     unexport.write("{}\n".format(pin["name"]))
             pin["file"].close()
 
-    def setup_input(self, name, edge, pullup):
+    def setup_input(self, name, edge, pull):
         """ Set pin as input.
 
         :param name: ID of the pin.
@@ -46,19 +46,20 @@ class Pins:
         :param edge: Edges to inform listeners about. May be "none", "rising",
                      "falling" or "both".
         :type edge: str
-        :param pullup: Pull mode of the pin. May be "none", "up" or "down".
-        :type pullup: str
+        :param pull: Pull mode of the pin. May be "none", "up" or "down".
+        :type pull: str
         """
 
-        if pullup is None:
-            pullup = "none"
-            pullup = self.PULL_MAPPING[pullup]
+        if pull is None:
+            pull = "none"
+            pull = self.PULL_MAPPING[pull]
         if edge is None:
             edge = "none"
         edge = self.EDGE_MAPPING[edge]
 
-        # Set pullup via wiringpi
-        subprocess.check_call(("gpio", "-g", "mode", name, pullup))
+        if pull != "none":
+            # Set pullup via wiringpi
+            subprocess.check_call(("gpio", "-g", "mode", name, pull))
         # Export pin
         open("/sys/class/gpio/export", "w").write(f"{name}\n")
         # Set edge
@@ -93,7 +94,7 @@ class Pins:
         if pin["type"] != "in":
             raise KeyError(f"Not an input: {name}")
         pin["file"].seek(0, io.SEEK_SET)
-        return pin["file"].read(1)
+        return pin["file"].read(1) == "1"
 
     def __setitem__(self, name, value):
         # Set the value of an output pin.
