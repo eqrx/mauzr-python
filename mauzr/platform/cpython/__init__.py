@@ -30,6 +30,7 @@ class Core:
         self.shutdown_event = threading.Event()
         self.scheduler = None
         self.mqtt = None
+        self.telegram = None
 
         self._setup_config(suit, agent, instance, parser)
         self._setup_logging()
@@ -156,3 +157,12 @@ class Core:
 
         from mauzr.platform.cpython.scheduler import Scheduler
         self.scheduler = Scheduler(self.shutdown_event)
+
+    def setup_telegram(self, *args, **kwargs):
+        """ Setup a telegram bot.
+
+        See :class:`mauzr.platform.cpython.telegram.Bot`.
+        """
+
+        from mauzr.platform.cpython.telegrambot import Bot
+        self.telegram = Bot(self, *args, **kwargs)

@@ -12,3 +12,4 @@ CPython
    config
    scheduler
    mqtt
+   telegram

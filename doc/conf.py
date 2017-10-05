@@ -182,7 +182,8 @@ autodoc_mock_imports = [
     'PIL',
     'pygame',
     'ussl',
-    'rrdtool'
+    'rrdtool',
+    'telegram.ext'
 ]
 
 modindex_common_prefix = ['mauzr.', 'mauzr.hardware.', 'mauzr.util.',
