@@ -34,11 +34,26 @@ Installing
 If you like to use this package right away just install it with
 `pip3 install mauzr`.
 
+Pip does not support package signatures. With some extra steps you can verify
+your installation anyways. I check and sign every version tag in this repository
+so you can use `git verify-tag` to inspect if the tag originated from me.
+
+- Receive the signing key:
+  `gpg --recv-keys 0CDDE5DB`
+- VERIFY KEY CAREFULLY
+  (Fingerprint: F2BD C496 45AB 1587 B6CC 280D 2ED5 9137 0CDD E5DB)
+- Clone and enter the repository:
+  `git clone https://github.com/eqrx/mauzr.git && cd mauzr`
+- Find latest tag, check it out and verify it:
+  `t=$(git tag -l 'v*.*'|tail -1) && git checkout $t && git verify-tag $t`
+- Install with pip:
+  `pip3 install -U .`
+
 How to contribute
 -----------------
 
 If you like to contribute (which would make me happy :)) you may participate
-in the issue tracker and/or open pull requests. 
+in the issue tracker and/or open pull requests.
 
 Versioning
 ----------
