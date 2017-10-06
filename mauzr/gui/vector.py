@@ -38,3 +38,6 @@ class Vector:
 
     def __repr__(self):
         return f"mauzr.gui.vector.Vector(*{self.values})"
+
+    def __reversed__(self):
+        return Vector(*reversed(self.values))

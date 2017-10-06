@@ -33,7 +33,7 @@ class Client:
         self._subscriptions = {}
         self._publications = {}
 
-        self._keepalive = 30
+        self._keepalive = cfg["keepalive"]
         core.add_context(self)
 
     def __enter__(self):
@@ -78,7 +78,7 @@ class Client:
     def _on_disconnect(self, *details):
         # Indicate that the client disconnected from the broker.
 
-        self.manager.on_disconnect(*details)
+        self.manager.on_disconnect()
 
     def _on_connect(self, _client, _userdata, flags, _rc):
         # Indicate that the client connected to the broker.

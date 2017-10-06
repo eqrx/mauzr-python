@@ -3,7 +3,7 @@ __author__ = "Alexander Sowitzki"
 
 import pygame # pylint: disable=import-error
 from mauzr.gui.vector import Vector
-from mauzr.gui.elements import Indicator, AgentIndicator
+from mauzr.gui.elements import Muter, Acceptor, AgentIndicator, Indicator
 from mauzr.gui.elements import ToggleController, SimpleController
 
 class Table:
@@ -34,18 +34,37 @@ class Table:
         display_size = Vector(*cfg["size"]["pixels"])
         pygame.display.set_mode(display_size.values)
         pygame.display.set_caption(cfg["title"])
-        self._cell_size = Vector(*(display_size//cfg["size"]["cells"]))
+        self._cell_count = Vector(*cfg["size"]["cells"])
+        self._cell_size = display_size//self._cell_count
         self._draw_size = self._cell_size - [10, 10]
-
         self._bell_sound = pygame.mixer.Sound("alarm.wav")
         self._bell_reset_task = core.scheduler(self._bell_reset, 10000,
                                                single=True)
         self._bell_check_task = core.scheduler(self._bell_check, 3000,
                                                single=False).enable()
 
-        self.elements = []
         self._core = core
         self._fps = cfg["fps"]
+        self.elements = []
+
+        e = Muter(*self.layout(reversed(self._cell_count) - (1, 1)), self)
+        self.elements.append(e)
+        e = Acceptor(*self.layout(reversed(self._cell_count) - (2, 1)), self)
+        self.elements.append(e)
+
+
+    def mute(self, value):
+        """ Set mute of audio notifications.
+
+        :param value: True if audio shall be muted.
+        :type value: bool
+        """
+
+        if value:
+            self._bell_reset_task.disable()
+            self._bell_check_task.disable()
+        else:
+            self._bell_reset()
 
     def _bell_check(self):
         if False in [indicator.state_acknowledged

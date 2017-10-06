@@ -262,6 +262,69 @@ class FeedDisplayer(BaseElement):
         if self._image_surface:
             self._surface.blit(self._image_surface, self._image_rect)
 
+class Acceptor(TextMixin, RectBackgroundMixin, BaseElement):
+    """ Acknowledge all states via one click.
+
+    :param location: Center of the element.
+    :type location: mauzr.gui.Vector
+    :param size: Size of the element.
+    :type size: mauzr.gui.Vector
+    :param panel: Panel to control.
+    :type panel: mauzr.gui.panel.Table
+    """
+
+    def __init__(self, location, size, panel):
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
+        TextMixin.__init__(self, "Clear", size)
+        self._panel = panel
+
+    def _on_click(self):
+        # Assume click means acknowledge
+        for element in self._panel.elements:
+            element.state_acknowledged = True
+
+    @property
+    def _color(self):
+        """ Color of the element as tuple. """
+
+        return ColorState.INFORMATION.value[0]
+
+class Muter(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
+    """ Mute audio notifications.
+
+    :param location: Center of the element.
+    :type location: mauzr.gui.Vector
+    :param size: Size of the element.
+    :type size: mauzr.gui.Vector
+    :param panel: Panel to control.
+    :type panel: mauzr.gui.panel.Table
+    """
+
+    def __init__(self, location, size, panel):
+        BaseElement.__init__(self, location, size)
+        RectBackgroundMixin.__init__(self)
+        TextMixin.__init__(self, "Mute", size)
+        conditions = {ColorState.WARNING: lambda v: v,
+                      ColorState.INFORMATION: lambda v: not v}
+        ColorStateMixin.__init__(self, conditions)
+        self._muted = False
+        self._panel = panel
+
+    def _on_click(self):
+        # Assume click means acknowledge
+        self._muted = not self._muted
+        self._update_state(self._muted)
+        self._panel.mute(self._muted)
+
+    @property
+    def _color(self):
+        """ Color of the element as tuple. """
+
+        if self._muted:
+            return ColorState.WARNING.value[0]
+        return ColorState.INFORMATION.value[0]
+
 class Gauge(RectBackgroundMixin, BaseElement):
     """ Gauge element. """
 
