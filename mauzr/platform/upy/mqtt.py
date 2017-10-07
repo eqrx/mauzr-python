@@ -37,6 +37,7 @@ class Client:
         self._status_topic = None
         self._connected = False
         self._active = True
+        self._last_send = None
 
         self._servercfg = None
 
@@ -98,7 +99,7 @@ class Client:
         session_present = self._mqtt.connect(clean_session=False)
         # Connect done, reduce timeout of socket
         self._mqtt.sock.settimeout(self._keepalive // 8)
-        # Pulish presence message
+        # Publish presence message
         self._mqtt.publish(self._status_topic, b'\xff', True, 1)
 
         self._connected = True
@@ -127,9 +128,9 @@ class Client:
                 while self._active:
                     try:
                         operation = self._mqtt.check_msg()
-                        if operation == 208:
+                        if operation is not None:
                             last_pong = ticks_ms()
-                        elif operation is None:
+                        else:
                             now = ticks_ms()
                             if ticks_diff(last_ping, now) > max_ping:
                                 last_ping = now
@@ -178,4 +179,6 @@ class Client:
 
         if qos == 2:
             raise ValueError("QoS 2 not supported")
-        return self._mqtt.publish(topic, value, retain, qos)
+        result = self._mqtt.publish(topic, value, retain, qos)
+        self._last_send = ticks_ms()
+        return result
