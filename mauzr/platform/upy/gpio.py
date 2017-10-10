@@ -14,12 +14,13 @@ class GPIO:
 
     def __init__(self):
         self._pins = {}
+        self._input_mapping = {}
         self.listeners = []
 
     def _on_change(self, pin):
         # React to a pin change.
 
-        name = pin.id()
+        name = self._input_mapping[pin.id()]
         value = pin()
         [listener(name, value) for listener in self.listeners]
 
@@ -42,6 +43,7 @@ class GPIO:
 
         self._pins[name] = machine.Pin(name, mode=machine.Pin.IN,
                                        pull=self.PULL_MAPPING[pullup])
+        self._input_mapping[self._pins[name].id()] = name
 
         if edge != "none":
             # Add callback if edge is specified

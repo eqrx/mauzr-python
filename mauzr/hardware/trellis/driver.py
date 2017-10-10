@@ -24,6 +24,7 @@ class Driver(mauzr.hardware.driver.PollingDriver):
         - **base** (:class:`str`) - Base to use for topics.
         - **address** (:class:`int`) - I2C address of the device.
         - **interval** (:class:`int`) - Button poll intervall in milliseconds.
+        - **interrupt** (:class:`str`) - Pin to use as input interrupt
         - **brightness** (:class:`int`) - Brightness of all active LEDs, 0-15.
 
     **Input topics:**
@@ -49,10 +50,19 @@ class Driver(mauzr.hardware.driver.PollingDriver):
         self._keys = None
         self._lastkeys = None
 
+        self._interrupt = cfg.get("interrupt", None)
+        if self._interrupt is not None:
+            core.gpio.setup_input(self._interrupt, "falling", "none")
+            core.gpio.listeners.append(self._on_pin)
+
         self._mqtt = core.mqtt
         self._bs = cfg["brightness"]
         core.mqtt.setup_publish(self._base + "buttons", None, 0)
         core.mqtt.subscribe(self._base + "leds", self._on_message, None, 0)
+
+    def _on_pin(self, name, value):
+        if name == self._interrupt:
+            self._poll()
 
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _init(self):
