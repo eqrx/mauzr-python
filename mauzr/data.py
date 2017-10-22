@@ -244,6 +244,7 @@ def gate_bool(core, topic):
                                          what the output may do.
         - ``topic``/*request* (``?``) - Bool requesting the output to be enabled
                                       or disabled.
+        - ``topic``/*reqeust/toggle* (``?``) - Request the output to be toggled.
 
     **Output Topics:**
 
@@ -257,6 +258,7 @@ def gate_bool(core, topic):
     base = topic + "/"
     con_tpc = base + "condition"
     req_tpc = base + "request"
+    tgl_tpc = req_tpc + "/toggle"
     on_allowed = base + "on_allowed"
     off_allowed = base + "off_allowed"
 
@@ -268,6 +270,8 @@ def gate_bool(core, topic):
         else:
             if tpc == req_tpc:
                 return val
+            elif tpc == tgl_tpc:
+                return not st[topic]
 
     aggregate(core, ((con_tpc, BCS), (topic, BS)),
               lambda st, tpc, val: st[con_tpc] == BC.FREE and not st[topic],
@@ -278,5 +282,5 @@ def gate_bool(core, topic):
               lambda st, tpc, val: st[con_tpc] == BC.FREE and st[topic],
               False, off_allowed, BS, 0)
 
-    aggregate(core, ((con_tpc, BCS), (req_tpc, BS)),
+    aggregate(core, ((topic, BS), (con_tpc, BCS), (req_tpc, BS), (tgl_tpc, BS)),
               _handler, False, topic, BS, 0)
