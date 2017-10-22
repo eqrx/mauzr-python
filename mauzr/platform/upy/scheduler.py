@@ -39,11 +39,14 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
 
         raise RuntimeError("Scheduler is going idle with no one to reset it")
 
-    def run(self):
+    def handle(self, block):
         """ Run the scheduler and process tasks. """
 
         while True:
             # Handle scheduler
-            self._handle()
+            next_task = self._handle(wait=block)
             # Force garbage collector
             gc.collect()
+
+            if not block:
+                return next_task

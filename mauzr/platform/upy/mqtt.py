@@ -4,8 +4,7 @@ __author__ = "Alexander Sowitzki"
 import gc # pylint: disable=import-error
 import ussl # pylint: disable=import-error
 from utime import ticks_ms, ticks_diff, sleep_ms # pylint: disable=import-error
-import usocket # pylint: disable=import-error
-import _thread
+#import _thread
 from umqtt.simple import MQTTClient # pylint: disable=import-error
 from umqtt.simple import MQTTException # pylint: disable=import-error
 
@@ -29,6 +28,7 @@ class Client:
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
+        self._pycom = core.pycom
         self._log = core.logger("<MQTT Client>")
         self._base = cfg["base"]
         self._keepalive = cfg["keepalive"]
@@ -40,6 +40,7 @@ class Client:
         self._last_send = None
 
         self._servercfg = None
+        self._scheduler = core.scheduler
 
         core.add_context(self)
 
@@ -54,7 +55,12 @@ class Client:
 
     def __enter__(self):
         # Startup.
-        _thread.start_new_thread(self._manage, [])
+        try:
+            import _thread
+            _thread.start_new_thread(self.manage, [])
+        except ImportError:
+            pass
+
         return self
 
     def __exit__(self, *exc_details):
@@ -115,8 +121,13 @@ class Client:
         # Clean up
         gc.collect()
 
-    def _manage(self):
-        # Perform client management.
+    def _is_elapsed(self, ts, thres):
+        now = ticks_ms()
+        d = ticks_diff(ts, now) if self._pycom else ticks_diff(now, ts)
+        return d > thres
+
+    def manage(self, call_scheduler=False):
+        """ Perform client management. """
 
         while self._active:
             try:
@@ -131,18 +142,34 @@ class Client:
                         if operation is not None:
                             last_pong = ticks_ms()
                         else:
-                            now = ticks_ms()
-                            if ticks_diff(last_ping, now) > max_ping:
-                                last_ping = now
+                            if self._is_elapsed(last_ping, max_ping):
+                                last_ping = ticks_ms()
                                 self._mqtt.ping()
-                            if ticks_diff(last_pong, now) > max_pong:
+                            if self._is_elapsed(last_pong, max_pong):
                                 raise MQTTException("Keepalive timeout")
-                    except usocket.timeout:
-                        pass
+                    except OSError as err:
+                        if str(err) != "Keepalive timeout":
+                            raise
+
+                        if call_scheduler:
+                            next_task = self._scheduler.handle(block=False)
+                            if next_task is None:
+                                call_scheduler = False
+                            else:
+                                timeout = min(self._keepalive // 8, next_task)
+                                self._mqtt.sock.settimeout(timeout)
             except (OSError, MQTTException) as err:
                 # Error happened, assume disconnect
                 self._disconnect(err)
-                sleep_ms(3000)
+                begin = ticks_ms()
+                if not call_scheduler:
+                    sleep_ms(3000)
+                while call_scheduler and not self._is_elapsed(begin, 3000):
+                    next_task = self._scheduler.handle(block=False)
+                    if next_task is None:
+                        sleep_ms(100)
+                    else:
+                        sleep_ms(next_task)
         self._disconnect()
 
     def subscribe(self, topic, qos):

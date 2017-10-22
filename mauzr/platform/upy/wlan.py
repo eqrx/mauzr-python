@@ -32,9 +32,10 @@ class Manager:
                                           single=True)
         self._networks = cfg["networks"]
         self._current_config = 0
-        #Synchronize hardware clock with NTP.
-        machine.RTC().ntp_sync("pool.ntp.org")
+
         if self.pycom:
+            #Synchronize hardware clock with NTP.
+            machine.RTC().ntp_sync("pool.ntp.org")
             self._wlan = network.WLAN(mode=network.WLAN.STA)
         else:
             self._wlan = network.WLAN(network.STA_IF)

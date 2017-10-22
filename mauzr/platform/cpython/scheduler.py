@@ -86,6 +86,6 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
                 # Clear enabled event
                 self._enabled_event.clear()
                 # Handle the scheduler
-                self._handle()
+                self._handle(wait=True)
         finally:
             pass

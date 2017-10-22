@@ -35,7 +35,7 @@ class LED:
     """ Color for system init. """
 
     def __init__(self, core):
-        self.pycom = core
+        self.pycom = core.pycom
         if self.pycom:
             # Disable default heartbeat
             pycom.heartbeat(False)

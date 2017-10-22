@@ -12,7 +12,8 @@ class GPIO:
                     "falling": machine.Pin.IRQ_FALLING,
                     "both": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING}
 
-    def __init__(self):
+    def __init__(self, core):
+        self._pycom = core.pycom
         self._pins = {}
         self._input_mapping = {}
         self.listeners = []
@@ -20,7 +21,7 @@ class GPIO:
     def _on_change(self, pin):
         # React to a pin change.
 
-        name = self._input_mapping[pin.id()]
+        name = self._input_mapping[str(pin)]
         value = pin()
         [listener(name, value) for listener in self.listeners]
 
@@ -41,14 +42,18 @@ class GPIO:
         if edge is None:
             edge = "none"
 
-        self._pins[name] = machine.Pin(name, mode=machine.Pin.IN,
-                                       pull=self.PULL_MAPPING[pullup])
-        self._input_mapping[self._pins[name].id()] = name
+        pin = machine.Pin(name, mode=machine.Pin.IN,
+                          pull=self.PULL_MAPPING[pullup])
+        self._pins[name] = pin
+        self._input_mapping[str(pin)] = name
 
         if edge != "none":
             # Add callback if edge is specified
-            self._pins[name].callback(self.EDGE_MAPPING[edge],
-                                      handler=self._on_change)
+            if self._pycom:
+                pin.callback(self.EDGE_MAPPING[edge], handler=self._on_change)
+            else:
+                pin.irq(trigger=self.EDGE_MAPPING[edge],
+                        handler=self._on_change)
 
     def setup_output(self, name, initial=False):
         """ Set pin as output.

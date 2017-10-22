@@ -22,15 +22,15 @@ class Core:
         self.scheduler = mauzr.platform.upy.scheduler.Scheduler()
         # pylint: disable=eval-used
         self.config = eval(open("config.py").read())
-        self.pycom = self.config.get("pycom", True)
-        if self.pycom:
-            self.led = mauzr.platform.upy.led.LED(self)
+        self.pycom = self.config["pycom"]
+        self.led = mauzr.platform.upy.led.LED(self)
         self.gpio = None
         self.spi = None
         self.i2c = None
         self.wlan = None
         self.mqtt = None
         self.sigfox = None
+        self._mqtt_client = None
         self.clean()
 
     @staticmethod
@@ -109,16 +109,16 @@ class Core:
         mauzr.platform.serializer.Bool.fmt = "!B"
 
         self.clean()
-        mqtt = Client(self, **kwargs)
+        self._mqtt_client = Client(self, **kwargs)
         self.clean()
-        mqtt.manager = self.mqtt
-        self.mqtt.mqtt = mqtt
+        self._mqtt_client.manager = self.mqtt
+        self.mqtt.mqtt = self._mqtt_client
 
     def _setup_gpio(self):
         """ Setup GPIO. """
 
         from mauzr.platform.upy.gpio import GPIO
-        self.gpio = GPIO()
+        self.gpio = GPIO(self)
         self.clean()
 
     def _setup_spi(self):
@@ -148,7 +148,10 @@ class Core:
         try:
             with self:
                 self.clean()
-                self.scheduler.run()
+                if self.pycom:
+                    self.scheduler.handle(block=True)
+                else:
+                    self._mqtt_client.manage(call_scheduler=True)
                 self.clean()
         except KeyboardInterrupt:
             self.led.simple_set(self.led.MANUAL)

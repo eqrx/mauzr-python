@@ -144,8 +144,9 @@ class Scheduler:
 
         raise NotImplementedError()
 
-    def _handle(self):
+    def _handle(self, wait):
         """ Handle the current state of the scheduler. """
+
         # Fetch all active tasks
         active_tasks = [task for task in self.tasks if task.enabled]
         # Fetch all pending tasks
@@ -158,8 +159,14 @@ class Scheduler:
         elif active_tasks:
             # No pending tasks but active tasks, wait for the next one
             d = min([task.pending_in for task in active_tasks])
-            if d > 0:
+            if d > 0 and wait:
                 self._wait(d)
+                return 0
+            return max(0, d)
+
         else:
             # No active tasks, go idle
-            self._idle()
+            if wait:
+                self._idle()
+            else:
+                return None
