@@ -1,27 +1,77 @@
-language: python
-python:
-  - "3.6"
-cache: pip
-install:
-script:
-- ln -s $HOME/.cache/pip $TRAVIS_BUILD_DIR/mauzr/.eggs
-- python setup.py pytest build_sphinx bdist_wheel sdist
-- touch build/sphinx/html/.nojekyll
-- echo mauzr.eqrx.net > build/sphinx/html/CNAME
-deploy:
-- provider: pages
-  skip_cleanup: true
-  github_token: $GITHUB_TOKEN
-  local_dir: build/sphinx/html/
-  on:
-    tags: true
-    branch: false
-- provider: pypi
-  skip_cleanup: true
-  skip_upload_docs: true
-  user: $PYPI_USER
-  password: $PYPI_PASSWD
-  distributions: "sdist bdist_wheel"
-  on:
-    tags: true
-    branch: false
+install: true
+
+services:
+  - docker
+
+stages:
+- test
+- name: distribute
+  if: tag =~ ^v\d{6}.\d\d?$
+
+jobs:
+  include:
+  - stage: test
+    script:
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 pytest build_sphinx
+  - stage: distribute
+    script:
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 build_sphinx sdist bdist_wheel
+    - sudo chown $(whoami) -R $PWD
+    - tar -zc -f doc.tar.gz -C build/sphinx html
+    deploy:
+    - provider: pypi
+      on:
+        tags: true
+      skip_cleanup: true
+      skip_upload_docs: true
+      user: $PYPI_USER
+      password: $PYPI_PASSWD
+      distributions: "sdist bdist_wheel"
+    - provider: pages
+      on:
+        tags: true
+      skip_cleanup: true
+      github_token: $GITHUB_TOKEN
+      local_dir: build/sphinx/html
+    - provider: releases
+      on:
+        tags: true
+      overwrite: true
+      skip_cleanup: true
+      api_key: $GITHUB_TOKEN
+      file_glob: true
+      file:
+      - doc.tar.gz
+      - dist/*
+  - stage: distribute
+    script:
+    - mkdir -p build/esp32
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp32 \
+      "make BOARD=SIPY && make BOARD=WIPY && make BOARD=DEVKITC"
+    - cp build/esp32/SIPY/release/sipy.bin build/esp32-sipy.bin
+    - cp build/esp32/WIPY/release/wipy.bin build/esp32-wipy.bin
+    - cp build/esp32/DEVKITC/release/wipy.bin build/esp32-devkitc.bin
+    deploy:
+    - provider: releases
+      on:
+        tags: true
+      overwrite: true
+      skip_cleanup: true
+      api_key: $GITHUB_TOKEN
+      file_glob: true
+      file:
+      - build/esp32-*.bin
+  - stage: distribute
+    script:
+    - mkdir -p build/esp82xx
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp82xx make
+    - cp build/esp82xx/firmware-combined.bin build/esp82xx.bin
+    deploy:
+    - provider: releases
+      on:
+        tags: true
+      overwrite: true
+      skip_cleanup: true
+      api_key: $GITHUB_TOKEN
+      file:
+      - build/esp82xx.bin
