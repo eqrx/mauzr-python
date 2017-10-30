@@ -101,8 +101,8 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Hardware :: Hardware Drivers'
     ],
-    setup_requires=['sphinx', 'pytest-runner', 'pytest-pylint'],
-    tests_require=['pytest', 'pylint'],
+    setup_requires=['sphinx'],
+    tests_require=['pytest', 'pylint', 'pytest-runner', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
     entry_points={
         "console_scripts": [
