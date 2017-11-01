@@ -218,11 +218,9 @@ class VersionCommand(setuptools.Command):
 
     def initialize_options(self):
         """ Implements required method. """
-        pass
 
     def finalize_options(self):
         """ Implements required method. """
-        pass
 
     @staticmethod
     def run():
@@ -262,6 +260,13 @@ setuptools.setup(
     setup_requires=['sphinx'],
     tests_require=['pytest', 'pylint', 'pytest-runner', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
+    extras_require={
+        "esp flashing": ["esptool"],
+        "esp fetching": ["requests"],
+        "image handling": ["Pillow"],
+        "rrd logging": ["rrdtool"],
+        "gui": ["pygame"]
+    },
     entry_points={
         "console_scripts": [
             'mauzr-picamera=mauzr.platform.raspberry.camera:main',
