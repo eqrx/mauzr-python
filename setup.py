@@ -257,8 +257,8 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Hardware :: Hardware Drivers'
     ],
-    setup_requires=['sphinx'],
-    tests_require=['pytest', 'pylint', 'pytest-runner', 'pytest-pylint'],
+    setup_requires=['sphinx', 'pytest-runner'],
+    tests_require=['pytest', 'pylint', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
         "esp flashing": ["esptool"],
