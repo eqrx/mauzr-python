@@ -93,7 +93,8 @@ class Client:
         self._status_topic = "{}agents/{}".format(self._base, user)
 
         self._mqtt = MQTTClient(server=cfg["host"], port=cfg["port"],
-                                client_id=user, keepalive=30,
+                                client_id=user,
+                                keepalive=self._keepalive // 1000,
                                 user=user, password=cfg["password"],
                                 ssl_params=ssl_params, ssl=ca)
 
