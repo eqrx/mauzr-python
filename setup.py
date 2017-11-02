@@ -64,9 +64,7 @@ class FetchCommand(setuptools.Command):
     """ Base directory for output. """
     description = "Flash mauzr to esp devices"
     """ Command description. """
-    user_options = [("new", "b", "Board is new (erase flash)"),
-                    ("board=", "b", "Board"),
-                    ("port=", "p", "Port to use for upload")]
+    user_options = [("board=", "b", "Board")]
     """ Available options. """
 
     def initialize_options(self):
