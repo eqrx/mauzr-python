@@ -65,7 +65,7 @@ class Client:
                                 ciphers=None)
 
         self.client.connect_async(kwargs["host"], kwargs["port"],
-                                  self._keepalive)
+                                  self._keepalive // 1000)
 
     def __exit__(self, *exc_details):
         # Disconnect and stop connector.
