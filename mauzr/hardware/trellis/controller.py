@@ -52,6 +52,7 @@ class Controller:
         cfg.update(kwargs)
 
         self._base = cfg["base"]
+        self._log = core.logger("<Trellis@{}>".format(self._base))
         self._button_topics = cfg["button_topics"]
         self._led_topics = cfg["led_topics"]
         self._led_default = cfg["led_default"]
@@ -81,6 +82,7 @@ class Controller:
 
             # Avoid redundancy only when sending
             if value != self._button_values[i]:
+                self._log.debug("Button %s changed to %s", i, value)
                 self._button_values[i] = value
                 self._mqtt.publish(topic, value, True)
 
@@ -89,6 +91,7 @@ class Controller:
         for i in range(0, 16):
             if topic == self._led_topics[i]:
                 if self._led_values[i] != val:
+                    self._log.debug("Led %s changed to %s", i, val)
                     self._led_values[i] = val
                     changed = True
         if changed:
