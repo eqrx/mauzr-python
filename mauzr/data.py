@@ -222,10 +222,13 @@ def convert(core, mapper, retain, default,
     def _on_message(topic, value):
         nonlocal last
         ret = mapper(value)
-        if ret is not None and (last is None or last != ret):
+        if ret is not None and (not retain or last != ret or last is None):
             last = ret
             core.mqtt.publish(out_topic, ret, retain)
             log.debug("Received %s - Published: %s", value, ret)
+        else:
+            log.debug("Received %s - Converted to: %s (Not published)",
+                      value, ret)
 
     core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
 
