@@ -259,11 +259,10 @@ setuptools.setup(
     tests_require=['pytest', 'pylint', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
-        "esp flashing": ["esptool"],
-        "esp fetching": ["requests"],
-        "image handling": ["Pillow"],
-        "rrd logging": ["rrdtool"],
-        "gui": ["pygame"]
+        "esp": ["esptool", "requests"],
+        "gui": ["pygame"],
+        "images": ["Pillow"],
+        "logging": ["rrdtool"]
     },
     entry_points={
         "console_scripts": [
