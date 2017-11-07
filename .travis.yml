@@ -25,7 +25,9 @@ jobs:
     language: python
     script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 build_sphinx sdist bdist_wheel
+    after_success:
     - sudo chown $(whoami) -R $PWD
+    before_deploy:
     - tar -zc -f doc.tar.gz -C build/sphinx html
     deploy:
     - provider: pypi
@@ -54,10 +56,12 @@ jobs:
       - dist/*
   - stage: distribute
     language: bash
-    script:
+    before_script:
     - mkdir -p build/esp32
+    script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp32 \
       "make BOARD=SIPY && make BOARD=WIPY && make BOARD=DEVKITC"
+    after_success:
     - cp build/esp32/SIPY/release/sipy.bin build/esp32-sipy.bin
     - cp build/esp32/WIPY/release/wipy.bin build/esp32-wipy.bin
     - cp build/esp32/DEVKITC/release/wipy.bin build/esp32-devkitc.bin
@@ -73,9 +77,11 @@ jobs:
       - build/esp32-*.bin
   - stage: distribute
     language: bash
-    script:
+    before_script:
     - mkdir -p build/esp82xx
+    script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp82xx make
+    before_deploy:
     - cp build/esp82xx/firmware-combined.bin build/esp82xx.bin
     deploy:
     - provider: releases
@@ -88,7 +94,9 @@ jobs:
       - build/esp82xx.bin
   - stage: dockerize
     language: bash
-    script:
+    before_script:
     - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWD"
+    script:
     - docker build -t eqrx/mauzr:x86-$MAUZR_VERSION -f .dockerfile --build-arg VCS_REF=$TRAVIS_COMMIT --build-arg VERSION=$MAUZR_VERSION --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) .
+    after_success:
     - docker push eqrx/mauzr:x86-$MAUZR_VERSION
