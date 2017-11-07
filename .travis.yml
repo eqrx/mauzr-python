@@ -1,5 +1,4 @@
-python:
-- "3.6"
+language: bash
 
 env:
 - MAUZR_VERSION=${TRAVIS_TAG#v}
@@ -17,27 +16,18 @@ stages:
 jobs:
   include:
   - stage: test
-    language: bash
     script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 ./setup.py pytest build_sphinx
   - stage: distribute
-    language: python
     script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 ./setup.py build_sphinx sdist bdist_wheel
     after_success:
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 twine upload -u "$PYPI_USER" -p "$PYPI_PASSWD" dist/*
     - sudo chown $(whoami) -R $PWD
     - tar -zc -f doc.tar.gz -C build/sphinx html
     - echo "mauzr.eqrx.net" > build/sphinx/html/CNAME
     - touch build/sphinx/html/.nojekyll
     deploy:
-    - provider: pypi
-      on:
-        tags: true
-      skip_cleanup: true
-      skip_upload_docs: true
-      user: $PYPI_USER
-      password: $PYPI_PASSWD
-      distributions: "sdist bdist_wheel"
     - provider: pages
       on:
         tags: true
@@ -55,7 +45,6 @@ jobs:
       - doc.tar.gz
       - dist/*
   - stage: distribute
-    language: bash
     before_script:
     - mkdir -p build/esp32
     script:
@@ -76,7 +65,6 @@ jobs:
       file:
       - build/esp32-*.bin
   - stage: distribute
-    language: bash
     before_script:
     - mkdir -p build/esp82xx
     script:
@@ -93,7 +81,6 @@ jobs:
       file:
       - build/esp82xx.bin
   - stage: dockerize
-    language: bash
     before_script:
     - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWD"
     script:
