@@ -1,6 +1,9 @@
-language: python
+
 python:
 - "3.6"
+
+env:
+- MAUZR_VERSION=${TRAVIS_TAG#v}
 
 services:
 - docker
@@ -9,13 +12,17 @@ stages:
 - test
 - name: distribute
   if: tag =~ ^v\d{6}.\d\d?$
+- name: dockerize
+  if: tag =~ ^v\d{6}.\d\d?$
 
 jobs:
   include:
   - stage: test
+    language: bash
     script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 pytest build_sphinx
   - stage: distribute
+    language: python
     script:
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 build_sphinx sdist bdist_wheel
     - sudo chown $(whoami) -R $PWD
@@ -46,6 +53,7 @@ jobs:
       - doc.tar.gz
       - dist/*
   - stage: distribute
+    language: bash
     script:
     - mkdir -p build/esp32
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp32 \
@@ -64,6 +72,7 @@ jobs:
       file:
       - build/esp32-*.bin
   - stage: distribute
+    language: bash
     script:
     - mkdir -p build/esp82xx
     - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp82xx make
@@ -77,3 +86,9 @@ jobs:
       api_key: $GITHUB_TOKEN
       file:
       - build/esp82xx.bin
+  - stage: dockerize
+    language: bash
+    script:
+    - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWD"
+    - docker build -t eqrx/mauzr:x86-$MAUZR_VERSION -f .dockerfile --build-arg VCS_REF=$TRAVIS_COMMIT --build-arg VERSION=$MAUZR_VERSION --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) .
+    - docker push eqrx/mauzr:x86-$MAUZR_VERSION
