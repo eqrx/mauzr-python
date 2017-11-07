@@ -1,4 +1,3 @@
-
 python:
 - "3.6"
 
@@ -20,15 +19,16 @@ jobs:
   - stage: test
     language: bash
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 pytest build_sphinx
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 ./setup.py pytest build_sphinx
   - stage: distribute
     language: python
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-x86 build_sphinx sdist bdist_wheel
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 ./setup.py build_sphinx sdist bdist_wheel
     after_success:
     - sudo chown $(whoami) -R $PWD
-    before_deploy:
     - tar -zc -f doc.tar.gz -C build/sphinx html
+    - echo "mauzr.eqrx.net" > build/sphinx/html/CNAME
+    - touch build/sphinx/html/.nojekyll
     deploy:
     - provider: pypi
       on:
@@ -59,7 +59,7 @@ jobs:
     before_script:
     - mkdir -p build/esp32
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp32 \
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:esp32 \
       "make BOARD=SIPY && make BOARD=WIPY && make BOARD=DEVKITC"
     after_success:
     - cp build/esp32/SIPY/release/sipy.bin build/esp32-sipy.bin
@@ -80,7 +80,7 @@ jobs:
     before_script:
     - mkdir -p build/esp82xx
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build-esp82xx make
+    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:esp82xx make
     before_deploy:
     - cp build/esp82xx/firmware-combined.bin build/esp82xx.bin
     deploy:
