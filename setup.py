@@ -10,24 +10,23 @@
 import setuptools
 import mauzr.setup
 
-MODULE = "mauzr"
-VERSION = mauzr.setup.VersionInfo(MODULE)
-mauzr.setup.VersionCommand.info = VERSION
+PACKAGE = "mauzr"
+mauzr.setup.update_version(PACKAGE)
+import mauzr._meta # pylint: disable=C0413
 
 setuptools.setup(
-    version=VERSION.python_version,
+    version=mauzr._meta.__version__, # pylint: disable=W0212
     author="Alexander Sowitzki",
     author_email="dev@eqrx.net",
     url="http://mauzr.eqrx.net",
-    name='mauzr',
+    name=PACKAGE,
     keywords="agent cps distributed framework hardware iot mqtt smart",
     description="Framework for developing cyber-physical systems and"
                 " IoT devices",
     packages=setuptools.find_packages(),
     cmdclass={"espbuild": mauzr.setup.ESPBuildCommand,
               "espfetch": mauzr.setup.ESPFetchCommand,
-              "espflash": mauzr.setup.ESPFlashCommand,
-              "version": mauzr.setup.VersionCommand},
+              "espflash": mauzr.setup.ESPFlashCommand},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
