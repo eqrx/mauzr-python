@@ -1,7 +1,7 @@
 language: bash
 
 env:
-- MAUZR_VERSION=${TRAVIS_TAG#v}
+- MAUZR_VERSION=${TRAVIS_TAG#v} DOCKER_RUN="docker run --rm -v $PWD:/opt/mauzr eqrx/mauzr-build"
 
 services:
 - docker
@@ -17,12 +17,12 @@ jobs:
   include:
   - stage: test
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 ./setup.py pytest build_sphinx
+    - ${DOCKER_RUN}:x86 ./setup.py pytest build_sphinx
   - stage: distribute
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 ./setup.py build_sphinx sdist bdist_wheel
+    - ${DOCKER_RUN}:x86 ./setup.py build_sphinx sdist bdist_wheel
+    - ${DOCKER_RUN}:x86 twine upload -u "$PYPI_USER" -p "$PYPI_PASSWD" dist/*
     after_success:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:x86 twine upload -u "$PYPI_USER" -p "$PYPI_PASSWD" dist/*
     - sudo chown $(whoami) -R $PWD
     - tar -zc -f doc.tar.gz -C build/sphinx html
     - echo "mauzr.eqrx.net" > build/sphinx/html/CNAME
@@ -48,8 +48,7 @@ jobs:
     before_script:
     - mkdir -p build/esp32
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:esp32 \
-      "make BOARD=SIPY && make BOARD=WIPY && make BOARD=DEVKITC"
+    - ${DOCKER_RUN}:esp32 "make BOARD=SIPY && make BOARD=WIPY && make BOARD=DEVKITC"
     after_success:
     - cp build/esp32/SIPY/release/sipy.bin build/esp32-sipy.bin
     - cp build/esp32/WIPY/release/wipy.bin build/esp32-wipy.bin
@@ -68,7 +67,7 @@ jobs:
     before_script:
     - mkdir -p build/esp82xx
     script:
-    - docker run -v $PWD:/opt/mauzr eqrx/mauzr-build:esp82xx make
+    - ${DOCKER_RUN}:esp82xx make
     before_deploy:
     - cp build/esp82xx/firmware-combined.bin build/esp82xx.bin
     deploy:
