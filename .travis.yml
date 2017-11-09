@@ -17,11 +17,11 @@ jobs:
   include:
   - stage: test
     script:
-    - ${DOCKER_RUN}:x86 ./setup.py pytest build_sphinx
+    - ${DOCKER_RUN}:x86_64 ./setup.py pytest build_sphinx
   - stage: distribute
     script:
-    - ${DOCKER_RUN}:x86 ./setup.py build_sphinx sdist bdist_wheel
-    - ${DOCKER_RUN}:x86 twine upload -u "$PYPI_USER" -p "$PYPI_PASSWD" dist/*
+    - ${DOCKER_RUN}:x86_64 ./setup.py build_sphinx sdist bdist_wheel
+    - ${DOCKER_RUN}:x86_64 twine upload -u "$PYPI_USER" -p "$PYPI_PASSWD" dist/*
     after_success:
     - sudo chown $(whoami) -R $PWD
     - tar -zc -f doc.tar.gz -C build/sphinx html
@@ -80,9 +80,9 @@ jobs:
       file:
       - build/esp82xx.bin
   - stage: dockerize
+    language: python
+    python: "3.6"
     before_script:
     - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWD"
     script:
-    - docker build -t eqrx/mauzr:x86-$MAUZR_VERSION -f .dockerfile --build-arg VCS_REF=$TRAVIS_COMMIT --build-arg VERSION=$MAUZR_VERSION --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) .
-    after_success:
-    - docker push eqrx/mauzr:x86-$MAUZR_VERSION
+    - ./setup.py dockerize --push
