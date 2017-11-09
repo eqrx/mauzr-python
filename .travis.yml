@@ -10,8 +10,7 @@ stages:
 - test
 - name: distribute
   if: tag =~ ^v\d{6}.\d\d?$
-- name: dockerize
-  if: tag =~ ^v\d{6}.\d\d?$
+- dockerize
 
 jobs:
   include:
