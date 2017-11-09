@@ -11,11 +11,12 @@ import setuptools
 import mauzr.setup
 
 PACKAGE = "mauzr"
-mauzr.setup.update_version(PACKAGE)
-import mauzr._meta # pylint: disable=C0413
+VERSION = mauzr.setup.update_version(PACKAGE)
+mauzr.setup.DockerCommand.version = VERSION
+mauzr.setup.DockerCommand.slug = "eqrx/mauzr"
 
 setuptools.setup(
-    version=mauzr._meta.__version__, # pylint: disable=W0212
+    version=VERSION,
     author="Alexander Sowitzki",
     author_email="dev@eqrx.net",
     url="http://mauzr.eqrx.net",
@@ -26,7 +27,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     cmdclass={"espbuild": mauzr.setup.ESPBuildCommand,
               "espfetch": mauzr.setup.ESPFetchCommand,
-              "espflash": mauzr.setup.ESPFlashCommand},
+              "espflash": mauzr.setup.ESPFlashCommand,
+              "dockerize": mauzr.setup.DockerCommand},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -45,14 +47,15 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Hardware :: Hardware Drivers'
     ],
-    setup_requires=['sphinx', 'pytest-runner'],
+    setup_requires=['pytest-runner'],
     tests_require=['pytest', 'pylint', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
+        "doc": ["sphinx"],
         "esp": ["esptool", "requests"],
         "gui": ["pygame"],
         "images": ["Pillow"],
-        "logging": ["rrdtool"]
+        "logging": ["rrdtool"],
     },
     entry_points={
         "console_scripts": [
