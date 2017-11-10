@@ -51,6 +51,14 @@ class Config:
     def __setitem__(self, key, value):
         self._config[key] = value
 
+    def get(self, *args):
+        """ See :func:`dict.get`. """
+
+        key = args[0]
+        if len(args) == 1:
+            return self[key]
+        return self[key] if key in self else args[1]
+
     def read_config(self):
         """ Find and read yaml configuration. """
 

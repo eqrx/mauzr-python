@@ -20,6 +20,6 @@ class Core(mauzr.platform.cpython.Core):
         mauzr.platform.cpython.Core.__init__(self, suit, agent,
                                              instance, parser)
         self.database = None
-        if "systemd" in self.config and self.config["systemd"]:
+        if self.config.get("systemd", False):
             from mauzr.platform.linux.systemd import Systemd
             self.add_context(Systemd(self))
