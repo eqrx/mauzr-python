@@ -10,17 +10,12 @@
 import setuptools
 import mauzr.setup
 
-PACKAGE = "mauzr"
-VERSION = mauzr.setup.update_version(PACKAGE)
-mauzr.setup.DockerCommand.version = VERSION
-mauzr.setup.DockerCommand.slug = "eqrx/mauzr"
-
 setuptools.setup(
-    version=VERSION,
+    version=0,
     author="Alexander Sowitzki",
     author_email="dev@eqrx.net",
     url="http://mauzr.eqrx.net",
-    name=PACKAGE,
+    name="mauzr",
     keywords="agent cps distributed framework hardware iot mqtt smart",
     description="Framework for developing cyber-physical systems and"
                 " IoT devices",
@@ -52,10 +47,12 @@ setuptools.setup(
     install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
         "doc": ["sphinx"],
+        "docker": ["gitpython"],
         "esp": ["esptool", "requests"],
         "gui": ["pygame"],
         "images": ["Pillow"],
         "logging": ["rrdtool"],
+        "prometheus": ["prometheus_client"]
     },
     entry_points={
         "console_scripts": [

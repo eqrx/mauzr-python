@@ -1,16 +1,13 @@
 language: bash
 
 env:
-- MAUZR_VERSION=${TRAVIS_TAG#v} DOCKER_RUN="docker run --rm -v $PWD:/opt/mauzr eqrx/mauzr-build"
+- DOCKER_RUN="docker run --rm -v $PWD:/opt/mauzr eqrx/mauzr-build"
 
 services:
 - docker
 
 stages:
 - test
-- name: distribute
-  if: tag =~ ^v\d{6}.\d\d?$
-- dockerize
 
 jobs:
   include:
@@ -20,68 +17,14 @@ jobs:
   - stage: distribute
     script:
     - ${DOCKER_RUN}:x86_64 ./setup.py build_sphinx sdist bdist_wheel
-    - ${DOCKER_RUN}:x86_64 twine upload -u "$PYPI_USER" -p "$PYPI_PASSWD" dist/*
     after_success:
     - sudo chown $(whoami) -R $PWD
-    - tar -zc -f doc.tar.gz -C build/sphinx html
     - echo "mauzr.eqrx.net" > build/sphinx/html/CNAME
     - touch build/sphinx/html/.nojekyll
     deploy:
     - provider: pages
       on:
-        tags: true
+        branch: master
       skip_cleanup: true
       github_token: $GITHUB_TOKEN
       local_dir: build/sphinx/html
-    - provider: releases
-      on:
-        tags: true
-      overwrite: true
-      skip_cleanup: true
-      api_key: $GITHUB_TOKEN
-      file_glob: true
-      file:
-      - doc.tar.gz
-      - dist/*
-  - stage: distribute
-    before_script:
-    - mkdir -p build/esp32
-    script:
-    - ${DOCKER_RUN}:esp32 "make BOARD=SIPY && make BOARD=WIPY && make BOARD=DEVKITC"
-    after_success:
-    - cp build/esp32/SIPY/release/sipy.bin build/esp32-sipy.bin
-    - cp build/esp32/WIPY/release/wipy.bin build/esp32-wipy.bin
-    - cp build/esp32/DEVKITC/release/wipy.bin build/esp32-devkitc.bin
-    deploy:
-    - provider: releases
-      on:
-        tags: true
-      overwrite: true
-      skip_cleanup: true
-      api_key: $GITHUB_TOKEN
-      file_glob: true
-      file:
-      - build/esp32-*.bin
-  - stage: distribute
-    before_script:
-    - mkdir -p build/esp82xx
-    script:
-    - ${DOCKER_RUN}:esp82xx make
-    before_deploy:
-    - cp build/esp82xx/firmware-combined.bin build/esp82xx.bin
-    deploy:
-    - provider: releases
-      on:
-        tags: true
-      overwrite: true
-      skip_cleanup: true
-      api_key: $GITHUB_TOKEN
-      file:
-      - build/esp82xx.bin
-  - stage: dockerize
-    language: python
-    python: "3.6"
-    before_script:
-    - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWD"
-    script:
-    - ./setup.py dockerize --push
