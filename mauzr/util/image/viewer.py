@@ -40,9 +40,9 @@ class Viewer:
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self._scale = cfg["scale"]
+        self._scale = cfg.get("scale", True)
+        self._mode = cfg.get("mode", "r")
         self._topic = cfg["topic"]
-        self._mode = cfg["mode"]
         core.mqtt.subscribe(self._topic, self._on_image,
                             ImageSerializer(self._mode), 0)
         self.panel = tkinter.ttk.Label(tkroot)
