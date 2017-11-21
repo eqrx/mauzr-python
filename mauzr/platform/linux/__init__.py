@@ -20,6 +20,16 @@ class Core(mauzr.platform.cpython.Core):
         mauzr.platform.cpython.Core.__init__(self, suit, agent,
                                              instance, parser)
         self.database = None
+        self.gpio = None
         if self.config.get("systemd", False):
             from mauzr.platform.linux.systemd import Systemd
             self.add_context(Systemd(self))
+
+    def setup_gpio(self, **kwargs):
+        """ Setup GPIO.
+
+        See :class:`mauzr.platform.raspberry.gpio.Pins`
+        """
+
+        from mauzr.platform.linux.gpio import Pins
+        self.gpio = Pins(self, **kwargs)

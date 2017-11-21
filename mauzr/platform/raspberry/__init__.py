@@ -14,14 +14,14 @@ class Core(mauzr.platform.linux.Core):
         self.i2c = None
         self.gpio = None
 
-    def setup_gpio(self):
+    def setup_gpio(self, **kwargs):
         """ Setup GPIO.
 
         See :class:`mauzr.platform.raspberry.gpio.Pins`
         """
 
         from mauzr.platform.raspberry.gpio import Pins
-        self.gpio = Pins(self)
+        self.gpio = Pins(self, **kwargs)
 
     def setup_i2c(self, *args, **kwargs):
         """ Setup I2C.
