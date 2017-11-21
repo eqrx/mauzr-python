@@ -1,8 +1,7 @@
-# Cache
 __pycache__
-# Build
 dist
 build
 mauzr.egg-info
 .eggs
 .cache
+.git
