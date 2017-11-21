@@ -57,7 +57,7 @@ setuptools.setup(
     },
     entry_points={
         "console_scripts": [
-            'mauzr-picamera=mauzr.platform.raspberry.camera:main',
+            'mauzr-camera=mauzr.platform.cpython.camera:main',
             'mauzr-linuxaudio=mauzr.platform.linux.audio.driver:main',
             'mauzr-imageviewer=mauzr.util.image.viewer:main',
             'mauzr-rrdlogger=mauzr.util.rrd.logger:main',

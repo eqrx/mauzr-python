@@ -1,13 +1,13 @@
-""" Camera functions for raspberry. """
+""" Camera functions. """
+
 __author__ = "Alexander Sowitzki"
 
-import time
-import io
-import picamera # pylint: disable=import-error
+# pylint: disable = import-error
+import cv2
 import mauzr
 
 class Driver:
-    """ Capture camera frames on raspberry and publish them to the network.
+    """ Capture camera frames and publish them to the network.
 
     :param core: Core instance.
     :type core: object
@@ -32,25 +32,37 @@ class Driver:
     **Output topics:**
 
         - `base` + *live*: Camera frames captured with maximum speed as jpeg.
-        - `base` + *0.1fps*: Camera frames captured with 0.1 fps as jpeg.
     """
 
     def __init__(self, core, cfgbase="camera", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self._camera = picamera.PiCamera()
-        self._camera.resolution = (1024, 768)
-        self._camera.vflip = cfg["flip"][0]
-        self._camera.hflip = cfg["flip"][1]
-        self._camera.framerate = cfg["framerate"]
         self._mqtt = core.mqtt
         self._base = cfg["base"]
+
+        self._camera = cv2.VideoCapture(0)
+        self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1024)
+        self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 768)
+        self._camera.set(cv2.CAP_PROP_FPS, cfg.get("framerate", 10))
+
+        vflip = cfg.get("vflip", False)
+        hflip = cfg.get("hflip", False)
+
+        self._flip = None
+        if vflip and hflip:
+            self._flip = -1
+        elif hflip:
+            self._flip = 0
+        elif vflip:
+            self._flip = 1
+
         core.mqtt.setup_publish(self._base + "live", None, 0)
         core.mqtt.setup_publish(self._base + "slow", None, 0)
 
-        core.scheduler(self._publish_slow, cfg["slowinterval"],
-                       single=False).enable()
+        if "slowinterval" in cfg:
+            core.scheduler(self._publish_slow, cfg["slowinterval"],
+                           single=False).enable()
         self._image = None
 
     def _publish_slow(self):
@@ -63,26 +75,17 @@ class Driver:
         # Capture and publish frames.
 
         while True:
-            try:
-                self._camera.start_preview()
-                time.sleep(2)
-                while True:
-                    with io.BytesIO() as stream:
-                        self._camera.capture(stream, 'jpeg')
-                        stream.seek(0)
-                        data = stream.read()
-                        self._image = data
-                        self._mqtt.publish(self._base + "live", data, False)
-            except picamera.exc.PiCameraRuntimeError as err:
-                print(err)
-                time.sleep(3)
-            finally:
-                self._camera.stop_preview()
+            image = self._camera.read()[1]
+            if self._flip is not None:
+                image = cv2.flip(image, self._flip)
+            image = cv2.imencode('.jpg', image)[1]
+            self._image = image.tostring()
+            self._mqtt.publish(self._base + "live", self._image, False)
 
 def main():
     """ Entry point for camera feeder. """
 
-    core = mauzr.raspberry("mauzr", "camera")
+    core = mauzr.cpython("mauzr", "camera")
     core.setup_mqtt()
     driver = Driver(core)
 
