@@ -1,5 +1,4 @@
-FROM python:3
-
+FROM eqrx/pythonbase
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
@@ -14,5 +13,4 @@ net.eqrx.mauzr.version=$VERSION \
 net.eqrx.mauzr.vcs-ref=$VCS_REF
 
 COPY . /opt/mauzr
-
-RUN pip3 install -U -e /opt/mauzr && pip3 install mauzr[esp]
+RUN pip3 --no-cache install -U -e /opt/mauzr && pip3 install --no-cache mauzr[esp]

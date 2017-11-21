@@ -14,14 +14,12 @@ class DockerCommand(setuptools.Command):
 
     description = "Build and push image"
     """ Command description. """
-    user_options = [("slug", None, "Slug of the image"),
-                    ("push", None, "Push image to docker hub")]
+    user_options = [("slug", None, "Slug of the image")]
     """ Available options. """
 
     def initialize_options(self):
         """ Set default values for options. """
 
-        self.push = False
         self.slug = None
 
     def finalize_options(self):
@@ -43,27 +41,31 @@ class DockerCommand(setuptools.Command):
         commit = repo.head.object.hexsha
         arch = {"x86_64": "amd64", "armv7l": "arm"}[platform.machine()]
         timestamp = datetime.datetime.now().isoformat()
-        tags = (f"{self.slug}:{arch}-{commit}", f"{self.slug}:{arch}-{branch}")
-        subprocess.check_call(["docker", "build", "-t", tags[0],
-                               "-f", ".dockerfile",
-                               "--build-arg", f"VERSION={branch}",
-                               "--build-arg", f"VCS_REF={commit}",
-                               "--build-arg", f"BUILD_DATE={timestamp}", "."])
-        if self.push:
+
+        for variant in os.listdir(".docker"):
+            tags = (f"{self.slug}:{variant}-{arch}-{commit}",
+                    f"{self.slug}:{variant}-{arch}-{branch}")
+            subprocess.check_call(["docker", "build", "-t", tags[0],
+                                   "-f", f".docker/{variant}", "--pull",
+                                   "--build-arg", f"VERSION={branch}",
+                                   "--build-arg", f"VCS_REF={commit}",
+                                   "--build-arg", f"BUILD_DATE={timestamp}",
+                                   "."])
+
             for tag in tags[1:]:
                 subprocess.check_call(("docker", "tag", tags[0], tag))
             for tag in tags:
                 subprocess.check_call(("docker", "push", tag))
-            subprocess.check_call(("manifest-tool", "push", "from-args",
-                                   "--ignore-missing",
-                                   "--platforms", "linux/amd64,linux/arm",
-                                   "--template", f"{self.slug}:ARCH-{commit}",
-                                   "--target", f"{self.slug}:{commit}"))
-            subprocess.check_call(("manifest-tool", "push", "from-args",
-                                   "--ignore-missing",
-                                   "--platforms", "linux/amd64,linux/arm",
-                                   "--template", f"{self.slug}:ARCH-{branch}",
-                                   "--target", f"{self.slug}:{branch}"))
+            mc = ("manifest-tool", "push", "from-args", "--ignore-missing",
+                  "--platforms", "linux/amd64,linux/arm",
+                  "--template", f"{self.slug}:{variant}-ARCH-{commit}",
+                  "--target", f"{self.slug}:{variant}-{commit}")
+            mb = ("manifest-tool", "push", "from-args", "--ignore-missing",
+                  "--platforms", "linux/amd64,linux/arm",
+                  "--template", f"{self.slug}:{variant}-ARCH-{branch}",
+                  "--target", f"{self.slug}:{variant}-{branch}")
+            subprocess.check_call(mc)
+            subprocess.check_call(mb)
 
 class ESPFetchCommand(setuptools.Command):
     """ Setuptools command for mauzr flashing. """
