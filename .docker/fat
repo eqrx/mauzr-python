@@ -1,4 +1,4 @@
-FROM eqrx/pythonbase
+FROM eqrx/mauzrbase:fat
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
