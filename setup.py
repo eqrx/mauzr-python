@@ -42,11 +42,12 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Hardware :: Hardware Drivers'
     ],
-    setup_requires=['pytest-runner'],
+    setup_requires=[],
     tests_require=['pytest', 'pylint', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
-        "doc": ["sphinx"],
+        "buildextra": ["sphinx", "pytest-runner"],
+        "raspberry": ["RPi.GPIO"],
         "docker": ["gitpython"],
         "esp": ["esptool", "requests"],
         "gui": ["pygame"],
