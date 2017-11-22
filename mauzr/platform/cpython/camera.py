@@ -39,12 +39,18 @@ class Driver:
         cfg.update(kwargs)
 
         self._mqtt = core.mqtt
+        self._image = None
         self._base = cfg["base"]
-
         self._camera = cv2.VideoCapture(0)
-        self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1024)
-        self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 768)
-        self._camera.set(cv2.CAP_PROP_FPS, cfg.get("framerate", 10))
+
+        resolution = cfg.get("resolution", None)
+        if resolution:
+            self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
+            self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+
+        framerate = cfg.get("framerate", None)
+        if framerate:
+            self._camera.set(cv2.CAP_PROP_FPS, framerate)
 
         vflip = cfg.get("vflip", False)
         hflip = cfg.get("hflip", False)
@@ -58,12 +64,12 @@ class Driver:
             self._flip = 1
 
         core.mqtt.setup_publish(self._base + "live", None, 0)
-        core.mqtt.setup_publish(self._base + "slow", None, 0)
 
         if "slowinterval" in cfg:
+            core.mqtt.setup_publish(self._base + "slow", None, 0)
             core.scheduler(self._publish_slow, cfg["slowinterval"],
                            single=False).enable()
-        self._image = None
+
 
     def _publish_slow(self):
         image = self._image
