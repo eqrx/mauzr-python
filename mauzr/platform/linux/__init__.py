@@ -20,6 +20,7 @@ class Core(mauzr.platform.cpython.Core):
         mauzr.platform.cpython.Core.__init__(self, suit, agent,
                                              instance, parser)
         self.database = None
+        self.i2c = None
         self.gpio = None
         if self.config.get("systemd", False):
             from mauzr.platform.linux.systemd import Systemd
@@ -33,3 +34,12 @@ class Core(mauzr.platform.cpython.Core):
 
         from mauzr.platform.linux.gpio import Pins
         self.gpio = Pins(self, **kwargs)
+
+    def setup_i2c(self, *args, **kwargs):
+        """ Setup I2C.
+
+        See :class:`mauzr.platform.raspberry.i2c.Bus`
+        """
+
+        from mauzr.platform.linux.i2c import Bus
+        self.i2c = Bus(self, *args, **kwargs)
