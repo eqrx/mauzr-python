@@ -37,8 +37,8 @@ def linux(suit, agent, instance=None, parser=None):
     from mauzr.platform.linux import Core
     return Core(suit, agent, instance, parser)
 
-def raspberry(suit, agent, instance=None, parser=None):
-    """ Create core for raspberry.
+def docker(suit, agent, instance=None, parser=None):
+    """ Create core for docker.
 
     :param suit: Suit this agent belongs to.
     :type suit: str
@@ -52,5 +52,5 @@ def raspberry(suit, agent, instance=None, parser=None):
     :rtype: mauzr.platform.raspberry.Core
     """
 
-    from mauzr.platform.raspberry import Core
+    from mauzr.platform.docker import Core
     return Core(suit, agent, instance, parser)
