@@ -38,13 +38,14 @@ class DockerCommand(setuptools.Command):
             raise RuntimeError("Workspace must be clean")
 
         branch = repo.active_branch
+        branch_suffix = f"-{branch}" if str(branch) != "master" else ""
         commit = repo.head.object.hexsha
         arch = {"x86_64": "amd64", "armv7l": "arm"}[platform.machine()]
         timestamp = datetime.datetime.now().isoformat()
 
         for variant in os.listdir(".docker"):
             tags = (f"{self.slug}:{variant}-{arch}-{commit}",
-                    f"{self.slug}:{variant}-{arch}-{branch}")
+                    f"{self.slug}:{variant}-{arch}{branch_suffix}")
             subprocess.check_call(["docker", "build", "-t", tags[0],
                                    "-f", f".docker/{variant}", "--pull",
                                    "--build-arg", f"VERSION={branch}",
@@ -62,8 +63,8 @@ class DockerCommand(setuptools.Command):
                   "--target", f"{self.slug}:{variant}-{commit}")
             mb = ("manifest-tool", "push", "from-args", "--ignore-missing",
                   "--platforms", "linux/amd64,linux/arm",
-                  "--template", f"{self.slug}:{variant}-ARCH-{branch}",
-                  "--target", f"{self.slug}:{variant}-{branch}")
+                  "--template", f"{self.slug}:{variant}-ARCH{branch_suffix}",
+                  "--target", f"{self.slug}:{variant}{branch_suffix}")
             subprocess.check_call(mc)
             subprocess.check_call(mb)
 
