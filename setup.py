@@ -46,14 +46,12 @@ setuptools.setup(
     tests_require=['pytest', 'pylint', 'pytest-pylint'],
     install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
-        "buildextra": ["sphinx", "pytest-runner"],
-        "raspberry": ["RPi.GPIO"],
-        "docker": ["gitpython"],
-        "esp": ["esptool", "requests"],
+        "build": ["sphinx", "pytest-runner"],
+        "dockerbuild": ["gitpython"],
+        "espbuild": ["esptool", "requests"],
+        "cluster": ["RPi.GPIO", "prometheus_client"],
         "gui": ["pygame"],
-        "images": ["Pillow"],
-        "logging": ["rrdtool"],
-        "prometheus": ["prometheus_client"]
+        "images": ["Pillow"]
     },
     entry_points={
         "console_scripts": [
