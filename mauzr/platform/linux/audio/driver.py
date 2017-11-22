@@ -68,7 +68,7 @@ class Driver:
 def main():
     """ Entry point for audio driver. """
 
-    core = mauzr.raspberry("mauzr", "audio")
+    core = mauzr.linux("mauzr", "audio")
     core.setup_mqtt()
     Driver(core)
     core.run()
