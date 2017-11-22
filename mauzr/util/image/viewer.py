@@ -4,7 +4,10 @@ __author__ = "Alexander Sowitzki"
 
 import tkinter
 import tkinter.ttk
+import datetime
 import PIL.ImageTk # pylint: disable=import-error
+import PIL.ImageFont
+import PIL.ImageDraw
 import mauzr
 from mauzr.util.image.serializer import ImageSerializer
 
@@ -43,6 +46,8 @@ class Viewer:
         self._scale = cfg.get("scale", True)
         self._mode = cfg.get("mode", "r")
         self._topic = cfg["topic"]
+        self._stamp = cfg.get("stamp", False)
+        self._rotation = cfg.get("rotation", None)
         core.mqtt.subscribe(self._topic, self._on_image,
                             ImageSerializer(self._mode), 0)
         self.panel = tkinter.ttk.Label(tkroot)
@@ -51,6 +56,8 @@ class Viewer:
         self._image = None
         self._freeze = False
         self._root = tkroot
+        self._image_received = None
+        self._font = PIL.ImageFont.load_default()
         tkroot.bind("<Key>", self._on_key)
 
     def _on_key(self, event):
@@ -81,9 +88,17 @@ class Viewer:
             if target[0] > maximum[0]:
                 target = (int(target[0] * maximum[0]/target[0]),
                           int(target[1] * maximum[0]/target[0]))
-            self._image = image.resize(target, PIL.Image.ANTIALIAS)
-        else:
-            self._image = image
+            image = image.resize(target, PIL.Image.ANTIALIAS)
+        if self._rotation:
+            image = image.rotate(self._rotation)
+        if self._stamp:
+
+            draw = PIL.ImageDraw.Draw(image)
+            draw.text((0, 0),
+                      str(datetime.datetime.now()),
+                      (255, 255, 255), font=self._font)
+
+        self._image = image
 
 def main():
     """ Entry point for the image viewer. """
