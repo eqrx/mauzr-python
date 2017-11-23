@@ -1,1 +1,10 @@
-.gitignore
+__pycache__
+dist
+build
+mauzr.egg-info
+.eggs
+.cache
+.git
+.docker
+tests
+doc
