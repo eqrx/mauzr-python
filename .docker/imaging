@@ -1,4 +1,4 @@
-FROM eqrx/mauzrbase:camera
+FROM eqrx/mauzrbase:imaging
 
 ARG BUILD_DATE
 ARG VCS_REF
