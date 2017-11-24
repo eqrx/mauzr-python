@@ -37,10 +37,10 @@ class Driver:
     def __init__(self, core, cfgbase="camera", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
+        self._cfg = cfg
 
         self._mqtt = core.mqtt
         self._image = None
-        self._base = cfg["base"]
         self._camera = cv2.VideoCapture(0)
 
         resolution = cfg.get("resolution", None)
@@ -52,41 +52,16 @@ class Driver:
         if framerate:
             self._camera.set(cv2.CAP_PROP_FPS, framerate)
 
-        vflip = cfg.get("vflip", False)
-        hflip = cfg.get("hflip", False)
-
-        self._flip = None
-        if vflip and hflip:
-            self._flip = -1
-        elif hflip:
-            self._flip = 0
-        elif vflip:
-            self._flip = 1
-
-        core.mqtt.setup_publish(self._base + "live", None, 0)
-
-        if "slowinterval" in cfg:
-            core.mqtt.setup_publish(self._base + "slow", None, 0)
-            core.scheduler(self._publish_slow, cfg["slowinterval"],
-                           single=False).enable()
-
-
-    def _publish_slow(self):
-        image = self._image
-        if image:
-            self._image = None
-            self._mqtt.publish(self._base + "slow", image, True)
+        core.mqtt.setup_publish(cfg["topic"], None, 0)
 
     def __call__(self):
         # Capture and publish frames.
 
         while True:
             image = self._camera.read()[1]
-            if self._flip is not None:
-                image = cv2.flip(image, self._flip)
             image = cv2.imencode('.jpg', image)[1]
             self._image = image.tostring()
-            self._mqtt.publish(self._base + "live", self._image, False)
+            self._mqtt.publish(self._cfg["topic"], self._image, False)
 
 def main():
     """ Entry point for camera feeder. """
