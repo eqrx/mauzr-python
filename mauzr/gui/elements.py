@@ -245,7 +245,7 @@ class FeedDisplayer(BaseElement):
     """
 
     def __init__(self, core, topic, qos, location, size):
-        from mauzr.util.image.serializer import SurfaceSerializer
+        from mauzr.util.image.serializer import Pygame as SurfaceSerializer
         core.mqtt.subscribe(topic, self._on_image,
                             SurfaceSerializer, qos)
         BaseElement.__init__(self, location, size)
