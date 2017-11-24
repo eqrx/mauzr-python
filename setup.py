@@ -57,6 +57,7 @@ setuptools.setup(
         "console_scripts": [
             'mauzr-camera=mauzr.platform.cpython.camera:main',
             'mauzr-linuxaudio=mauzr.platform.linux.audio.driver:main',
+            'mauzr-imageprocessor=mauzr.util.image.processor:main',
             'mauzr-imageviewer=mauzr.util.image.viewer:main',
             'mauzr-rrdlogger=mauzr.util.rrd.logger:main',
             'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main'
