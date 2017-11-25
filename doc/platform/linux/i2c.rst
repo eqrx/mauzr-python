@@ -1,7 +1,7 @@
 I2C
 """
 
-.. automodule:: mauzr.platform.raspberry.i2c
+.. automodule:: mauzr.platform.linux.i2c
     :members:
     :show-inheritance:
     :undoc-members:

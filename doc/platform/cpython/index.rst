@@ -9,7 +9,8 @@ CPython
 .. toctree::
    :maxdepth: 2
 
+   camera
    config
    scheduler
    mqtt
-   telegram
+   telegrambot

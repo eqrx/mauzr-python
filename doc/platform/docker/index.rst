@@ -1,7 +1,7 @@
-Raspberry
-^^^^^^^^^
+Docker
+^^^^^^
 
-.. automodule:: mauzr.platform.raspberry
+.. automodule:: mauzr.platform.docker
     :members:
     :show-inheritance:
     :undoc-members:
@@ -10,5 +10,3 @@ Raspberry
    :maxdepth: 2
 
    gpio
-   i2c
-   camera

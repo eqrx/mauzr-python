@@ -169,7 +169,7 @@ html_favicon = 'static/logo.ico'
 html_short_title = "mauzr doc"
 
 autodoc_mock_imports = [
-    'picamera',
+    'RPi.GPIO',
     'bluetooth',
     'machine',
     'utime',
@@ -183,7 +183,8 @@ autodoc_mock_imports = [
     'pygame',
     'ussl',
     'rrdtool',
-    'telegram.ext'
+    'telegram.ext',
+    'cv2'
 ]
 
 modindex_common_prefix = ['mauzr.', 'mauzr.hardware.', 'mauzr.util.',

@@ -6,12 +6,6 @@ import machine # pylint: disable=import-error
 class GPIO:
     """ Use GPIO pins. """
 
-    PULL_MAPPING = {"none": None, "up": machine.Pin.PULL_UP,
-                    "down": machine.Pin.PULL_UP+1}
-    EDGE_MAPPING = {"none": None, "rising": machine.Pin.IRQ_RISING,
-                    "falling": machine.Pin.IRQ_FALLING,
-                    "both": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING}
-
     def __init__(self, core):
         self._pycom = core.pycom
         self._pins = {}
@@ -42,18 +36,23 @@ class GPIO:
         if edge is None:
             edge = "none"
 
-        pin = machine.Pin(name, mode=machine.Pin.IN,
-                          pull=self.PULL_MAPPING[pullup])
+        pull_map = {"none": None, "up": machine.Pin.PULL_UP,
+                    "down": machine.Pin.PULL_DOWN}
+
+        edge_map = {"none": None, "rising": machine.Pin.IRQ_RISING,
+                    "falling": machine.Pin.IRQ_FALLING,
+                    "both": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING}
+
+        pin = machine.Pin(name, mode=machine.Pin.IN, pull=pull_map[pullup])
         self._pins[name] = pin
         self._input_mapping[str(pin)] = name
 
         if edge != "none":
             # Add callback if edge is specified
             if self._pycom:
-                pin.callback(self.EDGE_MAPPING[edge], handler=self._on_change)
+                pin.callback(edge_map[edge], handler=self._on_change)
             else:
-                pin.irq(trigger=self.EDGE_MAPPING[edge],
-                        handler=self._on_change)
+                pin.irq(trigger=edge_map[edge], handler=self._on_change)
 
     def setup_output(self, name, initial=False):
         """ Set pin as output.

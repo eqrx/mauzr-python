@@ -1,7 +1,8 @@
 GPIO
 """"
 
-.. automodule:: mauzr.platform.upy.gpio
+.. automodule:: mauzr.platform.docker.gpio
     :members:
     :show-inheritance:
     :undoc-members:
+    :noindex:

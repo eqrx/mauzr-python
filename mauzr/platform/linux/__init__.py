@@ -29,7 +29,7 @@ class Core(mauzr.platform.cpython.Core):
     def setup_gpio(self, **kwargs):
         """ Setup GPIO.
 
-        See :class:`mauzr.platform.raspberry.gpio.Pins`
+        See :class:`mauzr.platform.linux.gpio.Pins`
         """
 
         from mauzr.platform.linux.gpio import Pins
@@ -38,7 +38,7 @@ class Core(mauzr.platform.cpython.Core):
     def setup_i2c(self, *args, **kwargs):
         """ Setup I2C.
 
-        See :class:`mauzr.platform.raspberry.i2c.Bus`
+        See :class:`mauzr.platform.linux.i2c.Bus`
         """
 
         from mauzr.platform.linux.i2c import Bus

@@ -12,5 +12,5 @@ Platform
    base
    cpython/index
    linux/index
-   raspberry/index
+   docker/index
    upy/index

@@ -1,7 +1,7 @@
 Camera
 """"""
 
-.. automodule:: mauzr.platform.raspberry.camera
+.. automodule:: mauzr.platform.cpython.camera
     :members:
     :show-inheritance:
     :undoc-members:

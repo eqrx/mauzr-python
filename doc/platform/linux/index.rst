@@ -9,5 +9,7 @@ Linux
 .. toctree::
    :maxdepth: 2
 
-   systemd
    audio
+   gpio
+   i2c
+   systemd

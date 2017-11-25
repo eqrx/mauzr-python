@@ -49,7 +49,7 @@ def docker(suit, agent, instance=None, parser=None):
     :param parser: Argparse instance to use. If None, a new one will be used.
     :type parser: argparse.ArgumentParser
     :returns: Core instance.
-    :rtype: mauzr.platform.raspberry.Core
+    :rtype: mauzr.platform.docker.Core
     """
 
     from mauzr.platform.docker import Core
