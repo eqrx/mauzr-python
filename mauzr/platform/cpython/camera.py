@@ -2,8 +2,7 @@
 
 __author__ = "Alexander Sowitzki"
 
-# pylint: disable = import-error
-import cv2
+import cv2 # pylint: disable=import-error
 import mauzr
 
 class Driver:

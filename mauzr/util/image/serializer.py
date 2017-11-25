@@ -24,8 +24,8 @@ class OpenCV:
         :rtype: PIL.Image
         """
 
-        import cv2
-        import numpy
+        import cv2 # pylint: disable=import-error
+        import numpy # pylint: disable=import-error
 
         data = numpy.fromstring(data, numpy.uint8)
         return cv2.imdecode(data, cv2.IMREAD_UNCHANGED)

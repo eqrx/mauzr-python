@@ -5,9 +5,9 @@ __author__ = "Alexander Sowitzki"
 import tkinter
 import tkinter.ttk
 import PIL.ImageTk # pylint: disable=import-error
-import PIL.ImageFont
-import PIL.ImageDraw
-import cv2
+import PIL.ImageFont # pylint: disable=import-error
+import PIL.ImageDraw # pylint: disable=import-error
+import cv2 # pylint: disable=import-error
 import mauzr
 import mauzr.util.image.operation
 from mauzr.util.image.operation import resize

@@ -1,6 +1,6 @@
 """ Common image operations. """
 
-import cv2
+import cv2 # pylint: disable=import-error
 
 def rotate(**kwargs):
     """ Rotate an image. """
