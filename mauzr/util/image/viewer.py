@@ -108,7 +108,7 @@ class Viewer:
     def _on_image(self, topic, image):
         for op in self._ops:
             image = op(image)
-        shape = image.shape[0:2]
+        shape = tuple(reversed(image.shape[0:2]))
         if shape != self._last_image_size:
             self._last_image_size = shape
             self._set_resizer()
