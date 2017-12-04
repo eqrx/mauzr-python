@@ -60,7 +60,8 @@ setuptools.setup(
             'mauzr-imageprocessor=mauzr.util.image.processor:main',
             'mauzr-imageviewer=mauzr.util.image.viewer:main',
             'mauzr-rrdlogger=mauzr.util.rrd.logger:main',
-            'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main'
+            'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main',
+            'mauzr-ssd1308converter=mauzr.hardware.ssd1308.converter:main'
         ]
     }
 )
