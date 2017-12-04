@@ -125,7 +125,8 @@ class Manager:
             # Inform all callbacks
             for callback in config["callbacks"]:
                 callback(topic, payload)
-        except Exception:
+        except Exception as err:
+            self._log.exception(err)
             self._log.error("Exception for %s. Terminating.", config["topic"])
             # Inform core about failure
             self._core.on_failure()

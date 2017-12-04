@@ -94,3 +94,45 @@ def link_input(core, cfgbase="gpioin", **kwargs):
             task.enable()
 
     core.gpio.listeners.append(_on_setting)
+
+def link_output_set(core, cfgbase="gpioout", **kwargs):
+    """ Links a GPIO input to an MQTT topic.
+
+    :param core: Core instance.
+    :type core: object
+    :param cfgbase: Configuration entry for this unit.
+    :type cfgbase: str
+    :param kwargs: Keyword arguments that will be merged into the config.
+    :type kwargs: dict
+
+    **Required core units**:
+
+        - mqtt
+        - gpio
+
+    **Configuration:**
+
+        - **topic** (:class:`str`) - Input topic.
+        - **format** (:class:`str`) - Struct format of the message.
+        - **pins** (:class:`list`) - Pins to connect.
+        - **pwm** (:class:`bool`) - Info if PWMs are used.
+        - **qos** (:class:`int`) - QoS for the publish, 0-2.
+
+    **Input topics:**
+
+        - ``topic`` (``?``) -  The value of the GPIO pin.
+    """
+
+    cfg = core.config[cfgbase]
+    cfg.update(kwargs)
+
+    pins = cfg["pins"]
+    [core.gpio.setup_output(pin, pwm=cfg["pwm"]) for pin in pins]
+
+    def _on_setting(_topic, value):
+        for pin, v in zip(pins, value):
+            core.gpio[pin] = v
+
+    core.mqtt.subscribe(cfg["topic"], _on_setting,
+                        mauzr.platform.serializer.Struct(cfg["format"]),
+                        cfg.get("qos", 0))

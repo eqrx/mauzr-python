@@ -84,12 +84,20 @@ class Pins:
         value_file = open(f"/sys/class/gpio/gpio{name}/value", "rt")
         self.pins[name] = {"name": name, "type": "in", "file": value_file}
 
-    def setup_output(self, name):
+    def setup_output(self, name, pwm=False, initial=False):
         """ Set pin as output.
 
         :param name: Numer of the pin.
         :type name: int
+        :param pwm: If value if PWM.
+        :type pwm: bool
+        :param initial: Initial value to set.
+        :type initial: bool
+        :raises NotImplementedError: If PWM is set (currently not implemented)
         """
+
+        if pwm:
+            raise NotImplementedError("PWM currently not implemented on linux")
 
         # Export pin
         open("/sys/class/gpio/export", "w").write("{}".format(name))
@@ -99,6 +107,7 @@ class Pins:
         value_file = open(f"/sys/class/gpio/gpio{name}/value", "wt")
         # Open value file
         self.pins[name] = {"name": name, "type": "out", "file": value_file}
+        self[name] = float(initial)
 
     def __getitem__(self, name):
         # Retrieve value of an input pin.

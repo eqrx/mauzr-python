@@ -57,13 +57,15 @@ class Pins:
         :type initial: bool
         """
 
+        self._pins[name] = {"name": name, "type": "out", "pwm": None}
+
+        GPIO.setup(name, GPIO.OUT)
         if pwm:
-            pwm = GPIO.PWM(name, 140)
-            pwm.start()
+            pwm = GPIO.PWM(name, 200)
+            pwm.start(initial * 100.0)
+            self._pins[name]["pwm"] = pwm
         else:
-            GPIO.setup(name, GPIO.OUT)
-        self._pins[name] = {"name": name, "type": "out", "pwm": pwm}
-        self[name] = initial
+            self[name] = initial
 
     def _poll(self):
         for pin in [pin for pin in self._pins.values() if pin["type"] == "in"]:
@@ -81,7 +83,7 @@ class Pins:
     def __setitem__(self, name, value):
         # Set the value of an output pin.
 
-        if self._pins[name].get("pwm", None):
-            self._pins[name]["pwm"].ChangeDutyCycle(value)
+        if self._pins[name]["pwm"] is not None:
+            self._pins[name]["pwm"].ChangeDutyCycle(value * 100.0)
         else:
             GPIO.output(name, value)
