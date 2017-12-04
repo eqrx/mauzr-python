@@ -37,7 +37,7 @@ class Table:
         self._cell_count = Vector(*cfg["size"]["cells"])
         self._cell_size = display_size//self._cell_count
         self._draw_size = self._cell_size - [10, 10]
-        self._bell_sound = pygame.mixer.Sound("alarm.wav")
+        self._bell_sound = pygame.mixer.Sound("/usr/share/sounds/alarm.wav")
         self._bell_reset_task = core.scheduler(self._bell_reset, 10000,
                                                single=True)
         self._bell_check_task = core.scheduler(self._bell_check, 3000,

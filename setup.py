@@ -51,7 +51,7 @@ setuptools.setup(
         "espbuild": ["esptool", "requests"],
         "cluster": ["RPi.GPIO", "prometheus_client"],
         "gui": ["pygame"],
-        "images": ["Pillow"]
+        "images": ["Pillow", "numpy"]
     },
     entry_points={
         "console_scripts": [
@@ -61,7 +61,8 @@ setuptools.setup(
             'mauzr-imageviewer=mauzr.util.image.viewer:main',
             'mauzr-rrdlogger=mauzr.util.rrd.logger:main',
             'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main',
-            'mauzr-ssd1308converter=mauzr.hardware.ssd1308.converter:main'
+            'mauzr-ssd1308converter=mauzr.hardware.ssd1308.converter:main',
+            'mauzr-ws2812converter=mauzr.hardware.ws2812.converter:main'
         ]
     }
 )
