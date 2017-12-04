@@ -44,8 +44,8 @@ class DockerCommand(setuptools.Command):
         timestamp = datetime.datetime.now().isoformat()
 
         for variant in os.listdir(".docker"):
-            tags = (f"{self.slug}:{variant}-{arch}-{commit}",
-                    f"{self.slug}:{variant}-{arch}{branch_suffix}")
+            tags = [f"{self.slug}:{variant}-{arch}{suffix}" for suffix in
+                    (f"-{commit}", branch_suffix)]
             subprocess.check_call(["docker", "build", "-t", tags[0],
                                    "-f", f".docker/{variant}", "--pull",
                                    "--build-arg", f"VERSION={branch}",
@@ -53,20 +53,17 @@ class DockerCommand(setuptools.Command):
                                    "--build-arg", f"BUILD_DATE={timestamp}",
                                    "."])
 
-            for tag in tags[1:]:
-                subprocess.check_call(("docker", "tag", tags[0], tag))
+            subprocess.check_call(("docker", "tag") + tuple(tags))
             for tag in tags:
                 subprocess.check_call(("docker", "push", tag))
-            mc = ("manifest-tool", "push", "from-args", "--ignore-missing",
-                  "--platforms", "linux/amd64,linux/arm",
-                  "--template", f"{self.slug}:{variant}-ARCH-{commit}",
-                  "--target", f"{self.slug}:{variant}-{commit}")
-            mb = ("manifest-tool", "push", "from-args", "--ignore-missing",
-                  "--platforms", "linux/amd64,linux/arm",
-                  "--template", f"{self.slug}:{variant}-ARCH{branch_suffix}",
-                  "--target", f"{self.slug}:{variant}{branch_suffix}")
-            subprocess.check_call(mc)
-            subprocess.check_call(mb)
+
+            for tag in tags:
+                cmd = ("manifest-tool", "push", "from-args", "--ignore-missing",
+                       "--platforms", "linux/amd64,linux/arm", "--template",
+                       tag.replace(f"-{arch}", "-ARCH"), "--target",
+                       tag.replace(f"-{arch}", ""))
+                subprocess.check_call(cmd)
+
 
 class ESPFetchCommand(setuptools.Command):
     """ Setuptools command for mauzr flashing. """
