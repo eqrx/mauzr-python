@@ -1,4 +1,4 @@
-FROM eqrx/mauzrbase:cluster
+FROM eqrx/mauzrbase:raspberry
 
 ARG BUILD_DATE
 ARG VCS_REF
