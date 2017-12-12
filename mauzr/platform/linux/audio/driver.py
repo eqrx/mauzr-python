@@ -58,7 +58,11 @@ class Driver:
     def _on_say(self, _topic, text):
         # Ignore if already playing
         if self._process_done():
-            self._process = subprocess.Popen(("espeak", text))
+            e = subprocess.Popen(("espeak", "--stdout", text),
+                                 stdout=subprocess.PIPE)
+            self._process = subprocess.Popen(("aplay", "-t", "wav", "-"),
+                                             stdin=e.stdout)
+            e.stdout.close()
 
     def _on_play(self, _topic, path):
         # Ignore if already playing

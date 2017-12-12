@@ -34,10 +34,10 @@ class Controller:
 
         self._mqtt = core.mqtt
         self._base = cfg["base"]
-        core.mqtt.setup_publish(self._base + "/play", 0,
-                                mauzr.platform.serializer.String)
-        core.mqtt.setup_publish(self._base + "/say", 0,
-                                mauzr.platform.serializer.String)
+        core.mqtt.setup_publish(self._base + "play",
+                                mauzr.platform.serializer.String, 0)
+        core.mqtt.setup_publish(self._base + "say",
+                                mauzr.platform.serializer.String, 0)
 
     def play(self, path):
         """ Play a file on the driver device.
@@ -46,7 +46,7 @@ class Controller:
         :type path: str
         """
 
-        self._mqtt.publish(self._base + "/play", path, False)
+        self._mqtt.publish(self._base + "play", path, False)
 
     def say(self, text):
         """ Dispatch a text to the speech dispatcher.
@@ -55,4 +55,4 @@ class Controller:
         :type text: str
         """
 
-        self._mqtt.publish(self._base + "/say", text, False)
+        self._mqtt.publish(self._base + "say", text, False)

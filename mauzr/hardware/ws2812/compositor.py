@@ -20,7 +20,7 @@ class Compositor:
 
     @staticmethod
     def normalize(value):
-        """ Crop a given value to be between 0 and 255.
+        """ Crop a given value to be between 0.0 and 1.0.
 
         :param value: Value to crop.
         :type value: int
@@ -28,7 +28,7 @@ class Compositor:
         :rtype: int
         """
 
-        return min(max(value, 0), 255)
+        return min(max(value, 0.0), 1.0)
 
     def _channel(self, pixel, channel):
         """ Return the color a a pixel channel. """

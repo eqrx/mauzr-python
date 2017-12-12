@@ -250,7 +250,7 @@ def gate_bool(core, topic):
                                          what the output may do.
         - ``topic``/*request* (``?``) - Bool requesting the output to be enabled
                                       or disabled.
-        - ``topic``/*reqeust/toggle* (``?``) - Request the output to be toggled.
+        - ``topic``/*request/toggle* (``?``) - Request the output to be toggled.
 
     **Output Topics:**
 

@@ -10,7 +10,7 @@
 from mauzr.util.image.serializer import Pillow as ImageSerializer
 import mauzr.hardware.controller
 
-def convert(core, cfgbase="ssd1308", **kwargs):
+class Converter(mauzr.hardware.controller.TimedPublisher):
     """ Convert images of a topic to command bytes for SSD1308 display.
 
     :param core: Core instance.
@@ -28,6 +28,7 @@ def convert(core, cfgbase="ssd1308", **kwargs):
 
         - *input*: Input topic (``str``).
         - *output*: Output topic (``str``).
+        - *interval*: Output frequency in milliseconds (``int``).
 
     **Input topics:**
 
@@ -38,11 +39,26 @@ def convert(core, cfgbase="ssd1308", **kwargs):
         - `output`: Output topic containing the preformated data (``bytes``).
     """
 
+    def __init__(self, core, cfgbase="ssd1308", **kwargs):
+        cfg = core.config[cfgbase]
+        cfg.update(kwargs)
 
-    cfg = core.config[cfgbase]
-    cfg.update(kwargs)
+        self._out_topic = cfg["out"]
+        name = "<SSD1308Converter@{}>".format(self._out_topic)
+        mauzr.hardware.controller.TimedPublisher.__init__(self, core, name,
+                                                          cfg["interval"])
 
-    core.mqtt.setup_publish(cfg["out"], None, 0)
+        core.mqtt.subscribe(cfg["in"], self._on_input,
+                            ImageSerializer("bmp"), 0)
+        core.mqtt.setup_publish(self._out_topic, None, 0)
+        self._buf = None
+        self._mqtt = core.mqtt
+
+    def _publish(self):
+        # Check if new image present
+        if self._buf is not None:
+            self._mqtt.publish(self._out_topic, bytes(self._buf), True)
+            self._buf = None
 
     def _on_input(self, _topic, image):
         # Get image dimensions
@@ -50,20 +66,23 @@ def convert(core, cfgbase="ssd1308", **kwargs):
         # Number of data pages
         pages = imheight // 8
         # Create buffer
-        buf = [0x40] + [0]*(imwidth*pages)
+        buf = [0]*(imwidth*pages+1)
+        # First byte is data command
+        buf[0] = 0x40
         # Get pixels from image
         pix = image.load()
         # Iterate through the memory pages
-        i = 1
+        index = 1
         for page in range(pages):
             for x in range(imwidth):
                 bits = 0
                 for bit in [0, 1, 2, 3, 4, 5, 6, 7]:
-                    # Update buffer byte and increment to next byte.
-                    buf[i] = bits << 1 | pix[(x, page*8+7-bit)] != 0
-                i += 1
-        core.mqtt.publish(cfg["out"], bytes(buf), True)
-    core.mqtt.subscribe(cfg["in"], _on_input, ImageSerializer("bmp"), 0)
+                    bits = bits << 1
+                    bits |= 0 if pix[(x, page*8+7-bit)] == 0 else 1
+                # Update buffer byte and increment to next byte.
+                buf[index] = bits
+                index += 1
+        self._buf = buf
 
 def main():
     """ Main method for the Converter. """
@@ -72,7 +91,7 @@ def main():
     # Setup MQTT
     core.setup_mqtt()
     # Spin up converter
-    convert(core)
+    Converter(core)
     # Run core
     core.run()
 
