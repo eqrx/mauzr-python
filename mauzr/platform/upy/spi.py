@@ -4,17 +4,16 @@ __author__ = "Alexander Sowitzki"
 import machine # pylint: disable=import-error
 
 class Bus:
-    """ Access SPI on upy.
+    """ Access SPI on upy. """
 
-    :param baudrate: Baudrate to use for the bus.
-    :type baudrate: int
-    """
+    def __init__(self, core, configbase="spi", **kwargs):
+        cfg = core.config[configbase]
+        cfg.update(kwargs)
 
-    def __init__(self, baudrate=1000000):
         # Use bus 0
         self._spi = machine.SPI(0)
         # Init bus
-        self._spi.init(machine.SPI.MASTER, baudrate=baudrate)
+        self._spi.init(machine.SPI.MASTER, baudrate=cfg["baudrate"])
 
     def write(self, data):
         """ Write data on the bus.

@@ -121,11 +121,11 @@ class Core:
         self.gpio = GPIO(self)
         self.clean()
 
-    def _setup_spi(self):
+    def _setup_spi(self, **kwargs):
         """ Setup SPI. """
 
         import mauzr.platform.upy.spi
-        self.spi = mauzr.platform.upy.spi.Bus()
+        self.spi = mauzr.platform.upy.spi.Bus(self, **kwargs)
         self.clean()
 
     def _setup_i2c(self, *args, **kwargs):

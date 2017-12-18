@@ -21,6 +21,7 @@ class Core(mauzr.platform.cpython.Core):
                                              instance, parser)
         self.database = None
         self.i2c = None
+        self.spi = None
         self.gpio = None
         if self.config.get("systemd", False):
             from mauzr.platform.linux.systemd import Systemd
@@ -43,3 +44,12 @@ class Core(mauzr.platform.cpython.Core):
 
         from mauzr.platform.linux.i2c import Bus
         self.i2c = Bus(self, *args, **kwargs)
+
+    def setup_spi(self, *args, **kwargs):
+        """ Setup I2C.
+
+        See :class:`mauzr.platform.linux.spi.Bus`
+        """
+
+        from mauzr.platform.linux.spi import Bus
+        self.spi = Bus(self, *args, **kwargs)
