@@ -55,6 +55,12 @@ class Compositor:
 
         return [self.color(pixel) for pixel in self.pixels]
 
+    @staticmethod
+    def distance(a, b):
+        """ Get distance detween two points. """
+
+        return math.sqrt(sum([pow(ai-bi, 2) for ai, bi in zip(a, b)]))
+
 def create_ring_coordinates(radius, count):
     """ Create coordinates arranged in a ring.
 
