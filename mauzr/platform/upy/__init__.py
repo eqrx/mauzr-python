@@ -25,7 +25,6 @@ class Core:
         self.pycom = self.config["pycom"]
         self.led = mauzr.platform.upy.led.LED(self)
         self.gpio = None
-        self.spi = None
         self.i2c = None
         self.wlan = None
         self.mqtt = None
@@ -119,13 +118,6 @@ class Core:
 
         from mauzr.platform.upy.gpio import GPIO
         self.gpio = GPIO(self)
-        self.clean()
-
-    def _setup_spi(self, **kwargs):
-        """ Setup SPI. """
-
-        import mauzr.platform.upy.spi
-        self.spi = mauzr.platform.upy.spi.Bus(self, **kwargs)
         self.clean()
 
     def _setup_i2c(self, *args, **kwargs):
