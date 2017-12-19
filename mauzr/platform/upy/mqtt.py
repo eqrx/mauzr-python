@@ -32,6 +32,7 @@ class Client:
         self._log = core.logger("<MQTT Client>")
         self._base = cfg["base"]
         self._keepalive = cfg["keepalive"]
+        self._clean_session = not cfg.get("session", True)
         self.manager = None
         self._mqtt = None
         self._status_topic = None
@@ -85,6 +86,8 @@ class Client:
 
         cfg = self._servercfg
         ca = cfg.get("ca", None)
+
+
         ssl_params = None
         if ca:
             ssl_params = {"cert_reqs": ussl.CERT_REQUIRED, "ca_certs": ca}
@@ -103,7 +106,7 @@ class Client:
         # Set the message callback
         self._mqtt.set_callback(self._on_message)
         # Perform connect
-        session_present = self._mqtt.connect(clean_session=False)
+        session_present = self._mqtt.connect(clean_session=self._clean_session)
         # Connect done, reduce timeout of socket
         self._mqtt.sock.settimeout(self._keepalive // 8)
         # Publish presence message

@@ -28,6 +28,7 @@ class Client:
         self.client = paho.mqtt.client.Client()
         self._status_topic = None
         self._base = cfg["base"]
+        self._clean_session = not cfg.get("session", True)
         self.manager = None
 
         self._subscriptions = {}
@@ -50,7 +51,8 @@ class Client:
 
         user = kwargs["user"]
         self._status_topic = "{}agents/{}".format(self._base, user)
-        self.client.reinitialise(client_id=user, clean_session=False)
+        self.client.reinitialise(client_id=user,
+                                 clean_session=self._clean_session)
         self.client.username_pw_set(username=user, password=kwargs["password"])
         self.client.will_set(self._status_topic, payload=b'\x00'.decode(),
                              qos=2, retain=True)
