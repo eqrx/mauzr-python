@@ -175,7 +175,6 @@ autodoc_mock_imports = [
     'utime',
     'keys',
     'ustruct',
-    'pycom',
     'umqtt',
     'usocket',
     'network',

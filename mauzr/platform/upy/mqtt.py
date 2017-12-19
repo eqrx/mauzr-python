@@ -28,7 +28,6 @@ class Client:
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self._pycom = core.pycom
         self._log = core.logger("<MQTT Client>")
         self._base = cfg["base"]
         self._keepalive = cfg["keepalive"]
@@ -125,9 +124,10 @@ class Client:
         # Clean up
         gc.collect()
 
-    def _is_elapsed(self, ts, thres):
+    @staticmethod
+    def _is_elapsed(ts, thres):
         now = ticks_ms()
-        d = ticks_diff(ts, now) if self._pycom else ticks_diff(now, ts)
+        d = ticks_diff(now, ts)
         return d > thres
 
     def manage(self, call_scheduler=False):

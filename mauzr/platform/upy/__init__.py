@@ -15,15 +15,12 @@ class Core:
         utime.sleep_ms(1000)
 
         import mauzr.platform.upy.scheduler
-        import mauzr.platform.upy.led
 
         self._contexts = []
         self._log = logging.getLogger("<Core>")
         self.scheduler = mauzr.platform.upy.scheduler.Scheduler()
         # pylint: disable=eval-used
         self.config = eval(open("config.py").read())
-        self.pycom = self.config["pycom"]
-        self.led = mauzr.platform.upy.led.LED(self)
         self.gpio = None
         self.i2c = None
         self.wlan = None
@@ -94,7 +91,7 @@ class Core:
     def _setup_mqtt(self, **kwargs):
         """ Setup the MQTT manager and client.
 
-        See :class:`mauzr.mqtt.Manager` and :class:`mauzr.mqtt.pycom.mqtt`.
+        See :class:`mauzr.mqtt.Manager` and :class:`mauzr.mqtt.upy.mqtt`.
         Keyword arguments given to this function are passed to both
         constructors.
 
@@ -143,16 +140,12 @@ class Core:
         try:
             with self:
                 self.clean()
-                if self.pycom:
-                    self.scheduler.handle(block=True)
-                else:
-                    self._mqtt_client.manage(call_scheduler=True)
+                self._mqtt_client.manage(call_scheduler=True)
                 self.clean()
         except KeyboardInterrupt:
-            self.led.simple_set(self.led.MANUAL)
+            pass
         except Exception as err:
             sys.print_exception(err) # pylint: disable=no-member
-            self.led.simple_set(self.led.FAIL)
             if reset_on_exception:
                 machine.reset()
             raise

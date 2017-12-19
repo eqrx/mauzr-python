@@ -7,7 +7,6 @@ class GPIO:
     """ Use GPIO pins. """
 
     def __init__(self, core):
-        self._pycom = core.pycom
         self._pins = {}
         self._input_mapping = {}
         self.listeners = []
@@ -49,10 +48,7 @@ class GPIO:
 
         if edge != "none":
             # Add callback if edge is specified
-            if self._pycom:
-                pin.callback(edge_map[edge], handler=self._on_change)
-            else:
-                pin.irq(trigger=edge_map[edge], handler=self._on_change)
+            pin.irq(trigger=edge_map[edge], handler=self._on_change)
 
     def setup_output(self, name, initial=False):
         """ Set pin as output.

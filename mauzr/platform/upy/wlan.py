@@ -1,4 +1,4 @@
-""" WLAN for pycom systems. """
+""" WLAN for upy systems. """
 __author__ = "Alexander Sowitzki"
 
 import logging
@@ -21,7 +21,6 @@ class Manager:
             ssid, password and connection timeout in milliseconds.
     """
     def __init__(self, core, cfgbase="wlan", **kwargs):
-        self.pycom = core.pycom
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
         self._log = logging.getLogger("<WLAN>")
@@ -33,14 +32,10 @@ class Manager:
         self._networks = cfg["networks"]
         self._current_config = 0
 
-        if self.pycom:
-            #Synchronize hardware clock with NTP.
-            machine.RTC().ntp_sync("pool.ntp.org")
-            self._wlan = network.WLAN(mode=network.WLAN.STA)
-        else:
-            network.WLAN(network.AP_IF).active(False)
-            self._wlan = network.WLAN(network.STA_IF)
-            self._wlan.active(True)
+
+        network.WLAN(network.AP_IF).active(False)
+        self._wlan = network.WLAN(network.STA_IF)
+        self._wlan.active(True)
         self._maintain_task.enable(instant=True)
 
     def _delayed(self):
@@ -58,11 +53,8 @@ class Manager:
         return self._wlan.isconnected()
 
     def _connect(self, ssid, password, timeout):
-        if self.pycom:
-            self._wlan.connect(ssid, auth=(network.WLAN.WPA2, password),
-                               timeout=timeout)
-        else:
-            self._wlan.connect(ssid, password)
+        self._wlan.connect(ssid, auth=(network.WLAN.WPA2, password),
+                           timeout=timeout)
 
     def _maintain(self):
         # Maintain wlan connection.
