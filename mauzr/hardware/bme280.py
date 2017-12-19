@@ -4,7 +4,7 @@ __author__ = "Alexander Sowitzki"
 
 import struct
 import mauzr.hardware.driver
-import mauzr.platform.serializer
+import mauzr.serializer
 
 # pylint: disable=too-many-instance-attributes
 class Driver(mauzr.hardware.driver.DelayedPollingDriver):
@@ -57,11 +57,11 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         self._h4, self._h5, self._h6, self._tfine = [None] * 4
 
         core.mqtt.setup_publish(self._base + "temperature",
-                                mauzr.platform.serializer.Struct("!f"), 0)
+                                mauzr.serializer.Struct("!f"), 0)
         core.mqtt.setup_publish(self._base + "pressure",
-                                mauzr.platform.serializer.Struct("!I"), 0)
+                                mauzr.serializer.Struct("!I"), 0)
         core.mqtt.setup_publish(self._base + "humidity",
-                                mauzr.platform.serializer.Struct("B"), 0)
+                                mauzr.serializer.Struct("B"), 0)
 
         name = "<BME280@{}>".format(self._base)
         mauzr.hardware.driver.DelayedPollingDriver.__init__(self, core, name,

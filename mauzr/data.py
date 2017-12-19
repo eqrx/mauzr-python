@@ -2,8 +2,8 @@
 __author__ = "Alexander Sowitzki"
 
 import enum
-import mauzr.platform.serializer
-from mauzr.platform.serializer import Bool as BS
+import mauzr.serializer
+from mauzr.serializer import Bool as BS
 
 class BoolCondition(enum.Enum):
     """ Condition for boolean channels. """
@@ -16,7 +16,7 @@ class BoolCondition(enum.Enum):
     """ Channel is free to change. """
 
 BC = BoolCondition
-BCS = mauzr.platform.serializer.Enum(BC, "!H")
+BCS = mauzr.serializer.Enum(BC, "!H")
 
 def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
     """ Aggregates multiple topics to a single one.

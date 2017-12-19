@@ -3,7 +3,7 @@ __author__ = "Alexander Sowitzki"
 
 import subprocess
 import mauzr
-import mauzr.platform.serializer
+import mauzr.serializer
 
 class Driver:
     """ Simple audio driver for linux.
@@ -37,9 +37,9 @@ class Driver:
         self._process = None
 
         core.mqtt.subscribe(cfg["base"] + "/say", self._on_say,
-                            mauzr.platform.serializer.String, 0)
+                            mauzr.serializer.String, 0)
         core.mqtt.subscribe(cfg["base"] + "/play", self._on_play,
-                            mauzr.platform.serializer.String, 0)
+                            mauzr.serializer.String, 0)
 
     def _process_done(self):
         # Return True when playback is done

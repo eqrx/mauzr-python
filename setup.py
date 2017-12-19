@@ -53,7 +53,7 @@ setuptools.setup(
     },
     entry_points={
         "console_scripts": [
-            'mauzr-camera=mauzr.platform.cpython.camera:main',
+            'mauzr-camera=mauzr.platform.hardware.camera:main',
             'mauzr-linuxaudio=mauzr.platform.linux.audio.driver:main',
             'mauzr-imageprocessor=mauzr.util.image.processor:main',
             'mauzr-imageviewer=mauzr.util.image.viewer:main',

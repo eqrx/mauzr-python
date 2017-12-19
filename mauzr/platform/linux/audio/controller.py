@@ -1,7 +1,7 @@
 """ Controller for linux audio drivers."""
 __author__ = "Alexander Sowitzki"
 
-import mauzr.platform.serializer
+import mauzr.serializer
 
 class Controller:
     """ Manage :class:`mauzr.linux.audio.linker.Linker` over the network.
@@ -35,9 +35,9 @@ class Controller:
         self._mqtt = core.mqtt
         self._base = cfg["base"]
         core.mqtt.setup_publish(self._base + "play",
-                                mauzr.platform.serializer.String, 0)
+                                mauzr.serializer.String, 0)
         core.mqtt.setup_publish(self._base + "say",
-                                mauzr.platform.serializer.String, 0)
+                                mauzr.serializer.String, 0)
 
     def play(self, path):
         """ Play a file on the driver device.

@@ -1,7 +1,7 @@
 """ Controller for Trellis devices. """
 __author__ = "Alexander Sowitzki"
 
-import mauzr.platform.serializer
+import mauzr.serializer
 
 class Controller:
     """ Driver for trellis devices.
@@ -68,9 +68,9 @@ class Controller:
                                 default=self._led_bytes())
         core.mqtt.subscribe(self._base + "buttons", self._on_buttons, None, 0)
         [core.mqtt.subscribe(topic, self._on_led,
-                             mauzr.platform.serializer.Bool, 0)
+                             mauzr.serializer.Bool, 0)
          for topic in self._led_topics if topic is not None]
-        [core.mqtt.setup_publish(topic, mauzr.platform.serializer.Bool, 0)
+        [core.mqtt.setup_publish(topic, mauzr.serializer.Bool, 0)
          for topic in self._button_topics if topic is not None]
 
     def _on_buttons(self, _topic, buttons):

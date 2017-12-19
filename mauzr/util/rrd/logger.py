@@ -6,7 +6,7 @@ import pathlib
 import time
 import rrdtool # pylint: disable=import-error
 import mauzr
-from mauzr.platform.serializer import Struct
+from mauzr.serializer import Struct
 
 class RDDLogger:
     """ Log topics in RRD files.

@@ -1,7 +1,7 @@
 """  Helper for GPIO. """
 __author__ = "Alexander Sowitzki"
 
-import mauzr.platform.serializer
+import mauzr.serializer
 
 def link_output(core, cfgbase="gpioout", **kwargs):
     """ Links a GPIO output to an MQTT topic.
@@ -37,7 +37,7 @@ def link_output(core, cfgbase="gpioout", **kwargs):
         core.gpio[cfg["pin"]] = value
 
     core.mqtt.subscribe(cfg["topic"], _on_setting,
-                        mauzr.platform.serializer.Bool, cfg["qos"])
+                        mauzr.serializer.Bool, cfg["qos"])
 
 def link_input(core, cfgbase="gpioin", **kwargs):
     """ Links a GPIO input to an MQTT topic.
@@ -73,7 +73,7 @@ def link_input(core, cfgbase="gpioin", **kwargs):
     cfg = core.config[cfgbase]
     cfg.update(kwargs)
     core.gpio.setup_input(cfg["pin"], cfg["edge"], cfg["pull"])
-    core.mqtt.setup_publish(cfg["topic"], mauzr.platform.serializer.Bool,
+    core.mqtt.setup_publish(cfg["topic"], mauzr.serializer.Bool,
                             cfg["qos"], default=core.gpio[cfg["pin"]])
     current = None
     last = None
@@ -134,5 +134,5 @@ def link_output_set(core, cfgbase="gpioout", **kwargs):
             core.gpio[pin] = v
 
     core.mqtt.subscribe(cfg["topic"], _on_setting,
-                        mauzr.platform.serializer.Struct(cfg["format"]),
+                        mauzr.serializer.Struct(cfg["format"]),
                         cfg.get("qos", 0))

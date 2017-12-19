@@ -1,7 +1,7 @@
 """ Converter for WS2812 leds. """
 
 import mauzr
-from mauzr.platform.serializer import Struct
+from mauzr.serializer import Struct
 import numpy # pylint: disable=import-error
 
 

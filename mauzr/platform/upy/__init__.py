@@ -104,11 +104,11 @@ class Core:
 
         from mauzr.platform.mqtt import Manager
         from mauzr.platform.upy.mqtt import Client
-        import mauzr.platform.serializer
+        import mauzr.serializer
 
         self.mqtt = Manager(self, **kwargs)
 
-        mauzr.platform.serializer.Bool.fmt = "!B"
+        mauzr.serializer.Bool.fmt = "!B"
 
         self.clean()
         self._mqtt_client = Client(self, **kwargs)

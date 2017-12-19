@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """ Camera functions. """
 
 __author__ = "Alexander Sowitzki"

@@ -3,7 +3,7 @@ __author__ = "Alexander Sowitzki"
 
 
 import mauzr.hardware.driver
-import mauzr.platform.serializer
+import mauzr.serializer
 
 class Driver(mauzr.hardware.driver.DelayedPollingDriver):
     """ Driver for tsl2561 devices.
@@ -38,7 +38,7 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         self._mqtt = core.mqtt
 
         core.mqtt.setup_publish(self._base + "illuminance",
-                                mauzr.platform.serializer.Struct("!f"), 0)
+                                mauzr.serializer.Struct("!f"), 0)
 
         mauzr.hardware.driver.DelayedPollingDriver.__init__(self, core, name,
                                                             cfg["interval"],

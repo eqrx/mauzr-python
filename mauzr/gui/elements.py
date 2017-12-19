@@ -2,7 +2,7 @@
 __author__ = "Alexander Sowitzki"
 
 import math
-from mauzr.platform.serializer import Bool as BS
+from mauzr.serializer import Bool as BS
 from mauzr.gui import TextMixin, ColorStateMixin, RectBackgroundMixin
 from mauzr.gui import BaseElement, ColorState
 import pygame # pylint: disable=import-error

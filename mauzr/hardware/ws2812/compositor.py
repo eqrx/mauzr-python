@@ -7,7 +7,7 @@
 """
 
 import math
-from mauzr.platform.serializer import Struct
+from mauzr.serializer import Struct
 
 class Compositor:
     """ Helper to composite pixel colors.
