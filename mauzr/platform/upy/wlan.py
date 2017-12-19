@@ -38,6 +38,7 @@ class Manager:
             machine.RTC().ntp_sync("pool.ntp.org")
             self._wlan = network.WLAN(mode=network.WLAN.STA)
         else:
+            network.WLAN(network.AP_IF).active(False)
             self._wlan = network.WLAN(network.STA_IF)
             self._wlan.active(True)
         self._maintain_task.enable(instant=True)
