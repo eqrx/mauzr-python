@@ -20,9 +20,7 @@ setuptools.setup(
     description="Framework for developing cyber-physical systems and"
                 " IoT devices",
     packages=setuptools.find_packages(),
-    cmdclass={"espbuild": mauzr.setup.ESPBuildCommand,
-              "espfetch": mauzr.setup.ESPFetchCommand,
-              "espflash": mauzr.setup.ESPFlashCommand,
+    cmdclass={"espflash": mauzr.setup.ESPFlashCommand,
               "dockerize": mauzr.setup.DockerCommand},
     classifiers=[
         'Development Status :: 3 - Alpha',
