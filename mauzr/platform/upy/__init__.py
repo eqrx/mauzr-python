@@ -66,6 +66,9 @@ class Core:
         # Still no ExitStack
         [context.__exit__(*exc_details) for context in self._contexts]
 
+    def on_failure(self):
+        """ Called when an unrecoverable exception happened. """
+
     def add_context(self, context):
         """ Add a context to be managed by this core.
 
