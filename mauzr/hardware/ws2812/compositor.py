@@ -7,33 +7,36 @@
 """
 
 import math
+from mauzr.platform.serializer import Struct
 
 class Compositor:
     """ Helper to composite pixel colors.
 
     :param pixels: Pixel coordinates to manage.
     :type pixels: tuple
+    :param core: Core instance.
+    :type core: object
+    :param cfgbase: Configuration entry for this unit.
+    :type cfgbase: str
+    :param kwargs: Keyword arguments that will be merged into the config.
+    :type kwargs: dict
     """
 
-    def __init__(self, pixels):
-        self.pixels = pixels
+    def __init__(self, core, pixels, cfgbase="compositor", **kwargs):
+        cfg = core.config[cfgbase]
+        cfg.update(kwargs)
+        self._cfg = cfg
 
-    @staticmethod
-    def normalize(value):
-        """ Crop a given value to be between 0.0 and 1.0.
+        self._mqtt = core.mqtt
+        self._pixels = pixels
+        serializer = Struct("!" + "fff" * len(pixels))
 
-        :param value: Value to crop.
-        :type value: int
-        :returns: Croped value.
-        :rtype: int
-        """
+        if "coordinates_topic" in cfg:
+            d = [item for sublist in pixels for item in sublist]
+            core.mqtt.setup_publish(cfg["coordinates_topic"], serializer, 0, d)
+        core.mqtt.setup_publish(cfg["topic"], serializer, 0)
 
-        return min(max(value, 0.0), 1.0)
-
-    def _channel(self, pixel, channel):
-        """ Return the color a a pixel channel. """
-
-        raise NotImplementedError()
+        core.scheduler(self._update, 1000//cfg["freq"], single=False).enable()
 
     def color(self, pixel):
         """ Return the color of a single pixel.
@@ -44,7 +47,8 @@ class Compositor:
         :rtype: tuple
         """
 
-        return [self._channel(pixel, channel) for channel in range(0, 3)]
+        return [min(max(self._channel(pixel, channel), 0.0), 1.0)
+                for channel in range(0, 3)]
 
     def colors(self):
         """ Return the colors of all pixels.
@@ -53,13 +57,15 @@ class Compositor:
         :rtype: list
         """
 
-        return [self.color(pixel) for pixel in self.pixels]
+        return [self.color(pixel) for pixel in self._pixels]
 
-    @staticmethod
-    def distance(a, b):
-        """ Get distance detween two points. """
+    def _update(self):
+        raise NotImplementedError()
 
-        return math.sqrt(sum([pow(ai-bi, 2) for ai, bi in zip(a, b)]))
+    def _channel(self, pixel, channel):
+        """ Return the color a a pixel channel. """
+
+        raise NotImplementedError()
 
 def create_ring_coordinates(radius, count):
     """ Create coordinates arranged in a ring.

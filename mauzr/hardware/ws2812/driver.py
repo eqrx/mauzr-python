@@ -1,5 +1,7 @@
 """ Driver for WS2812 leds. """
 
+import spidev # pylint: disable=import-error
+
 def driver(core, cfgbase="ws2812", **kwargs):
     """ Driver for WS2812 leds.
 
@@ -11,9 +13,11 @@ def driver(core, cfgbase="ws2812", **kwargs):
     :type kwargs: dict
     """
 
-    spi = core.spi # Baudrate must be 3_200_000
-
     cfg = core.config[cfgbase]
     cfg.update(kwargs)
 
-    core.mqtt.subscribe(cfg["topic"], lambda t, v: spi.writer(list(v)), None, 0)
+    spi = spidev.SpiDev()
+    spi.open(cfg["bus"], cfg["device"])
+
+    core.mqtt.subscribe(cfg["topic"], lambda t, v: spi.xfer(list(v), 3200000),
+                        None, 0)
