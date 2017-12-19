@@ -2,7 +2,7 @@
 __author__ = "Alexander Sowitzki"
 
 import pygame # pylint: disable=import-error
-from mauzr.gui.vector import Vector
+from mauzr.gui.base import Vector
 from mauzr.gui.elements import Muter, Acceptor, AgentIndicator, Indicator
 from mauzr.gui.elements import ToggleController, SimpleController
 
