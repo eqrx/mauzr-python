@@ -35,8 +35,7 @@ class GPIO:
         if edge is None:
             edge = "none"
 
-        pull_map = {"none": None, "up": machine.Pin.PULL_UP,
-                    "down": machine.Pin.PULL_DOWN}
+        pull_map = {"none": None, "up": machine.Pin.PULL_UP}
 
         edge_map = {"none": None, "rising": machine.Pin.IRQ_RISING,
                     "falling": machine.Pin.IRQ_FALLING,

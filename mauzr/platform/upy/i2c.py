@@ -25,23 +25,9 @@ class Bus:
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self.baudrate = cfg.get("baudrate", 400000)
-        self.pins = cfg.get("pins", ("P9", "P10"))
-        self.i2c = machine.I2C(0)
-
-        core.add_context(self)
-
-    def __enter__(self):
-        # Init bus.
-
-        self.i2c.init(machine.I2C.MASTER, baudrate=self.baudrate,
-                      pins=self.pins)
-        return self
-
-    def __exit__(self, *exec_details):
-        # Deinit bus.
-
-        pass
+        sda, scl = [machine.Pin(p) for p in cfg["pins"]]
+        self.i2c = machine.I2C(cfg["bus"],
+                               sda=sda, scl=scl, freq=cfg["baudrate"])
 
     def write(self, address, data):
         """ Write data to a device.

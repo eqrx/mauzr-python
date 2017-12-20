@@ -2,7 +2,6 @@
 __author__ = "Alexander Sowitzki"
 
 import logging
-import machine # pylint: disable=import-error
 import network # pylint: disable=import-error
 
 class Manager:
@@ -53,8 +52,7 @@ class Manager:
         return self._wlan.isconnected()
 
     def _connect(self, ssid, password, timeout):
-        self._wlan.connect(ssid, auth=(network.WLAN.WPA2, password),
-                           timeout=timeout)
+        self._wlan.connect(ssid, password, timeout)
 
     def _maintain(self):
         # Maintain wlan connection.
