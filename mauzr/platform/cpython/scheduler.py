@@ -64,12 +64,12 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
         return task
 
     @staticmethod
-    def _wait(delay):
+    def idle(delay):
         # Wait the specified amount of time in milliseconds.
 
         time.sleep(delay/1000)
 
-    def _idle(self):
+    def _wait(self):
         # No active tasks are present. Wait and check for new tasks.
 
         # Wait for the enable event while shutdown is not requested
@@ -86,6 +86,6 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
                 # Clear enabled event
                 self._enabled_event.clear()
                 # Handle the scheduler
-                self._handle(wait=True)
+                self._handle()
         finally:
             pass

@@ -140,7 +140,7 @@ class Core:
         try:
             with self:
                 self.clean()
-                self._mqtt_client.manage(call_scheduler=True)
+                self.scheduler.handle()
                 self.clean()
         except KeyboardInterrupt:
             pass

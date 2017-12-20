@@ -127,7 +127,7 @@ class Scheduler:
         self._log.warning("Task delayed.")
 
     @staticmethod
-    def _wait(delay):
+    def idle(delay):
         """ Wait the specified delay.
 
         :raise NotImplementedError: If not overwritten.
@@ -136,7 +136,7 @@ class Scheduler:
         raise NotImplementedError()
 
     @staticmethod
-    def _idle():
+    def _wait():
         """ Wait until tasks have been enabled.
 
         :raise NotImplementedError: If not overwritten.
@@ -144,7 +144,7 @@ class Scheduler:
 
         raise NotImplementedError()
 
-    def _handle(self, wait):
+    def _handle(self):
         """ Handle the current state of the scheduler. """
 
         # Fetch all active tasks
@@ -159,14 +159,9 @@ class Scheduler:
         elif active_tasks:
             # No pending tasks but active tasks, wait for the next one
             d = min([task.pending_in for task in active_tasks])
-            if d > 0 and wait:
-                self._wait(d)
-                return 0
+            self.idle(d)
             return max(0, d)
 
         else:
             # No active tasks, go idle
-            if wait:
-                self._idle()
-            else:
-                return None
+            self._wait()

@@ -27,26 +27,24 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
         return task
 
     @staticmethod
-    def _wait(delay):
+    def idle(delay):
         # Wait the specified amount of time.
 
         # Wait with utime
-        utime.sleep_ms(delay)
+        if delay > 0:
+            utime.sleep_ms(delay)
 
     @staticmethod
-    def _idle():
+    def _wait():
         # No active tasks are present. Wait and check for new tasks.
 
         raise RuntimeError("Scheduler is going idle with no one to reset it")
 
-    def handle(self, block):
+    def handle(self):
         """ Run the scheduler and process tasks. """
 
         while True:
             # Handle scheduler
-            next_task = self._handle(wait=block)
+            self._handle()
             # Force garbage collector
             gc.collect()
-
-            if not block:
-                return next_task

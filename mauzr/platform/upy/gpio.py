@@ -6,7 +6,7 @@ import machine # pylint: disable=import-error
 class GPIO:
     """ Use GPIO pins. """
 
-    def __init__(self, core):
+    def __init__(self, _core):
         self._pins = {}
         self._input_mapping = {}
         self.listeners = []

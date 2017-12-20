@@ -2,9 +2,6 @@
 __author__ = "Alexander Sowitzki"
 
 import gc # pylint: disable=import-error
-import ussl # pylint: disable=import-error
-from utime import ticks_ms, ticks_diff, sleep_ms # pylint: disable=import-error
-#import _thread
 from umqtt.simple import MQTTClient # pylint: disable=import-error
 from umqtt.simple import MQTTException # pylint: disable=import-error
 
@@ -39,6 +36,14 @@ class Client:
         self._active = True
         self._last_send = None
 
+        s = core.scheduler
+
+        self._reconnect_task = s(self._reconnect, self._keepalive,
+                                 single=False).enable(instant=True)
+        self._ping_task = s(self._ping, 5000, single=False)
+
+        s.idle = self._recv
+
         self._servercfg = None
         self._scheduler = core.scheduler
 
@@ -54,20 +59,23 @@ class Client:
         self._servercfg = kwargs
 
     def __enter__(self):
-        # Startup.
-        try:
-            import _thread
-            _thread.start_new_thread(self.manage, [])
-        except ImportError:
-            pass
-
         return self
 
     def __exit__(self, *exc_details):
         # Shutdown.
         self._active = False
 
+    def _reconnect(self, reason=None):
+        self._disconnect(reason)
+        try:
+            self._connect()
+        except OSError as err:
+            self._disconnect(err)
+            self._reconnect_task.enable(after=3000)
+
     def _disconnect(self, reason=None):
+        self._reconnect_task.disable()
+        self._ping_task.disable()
         if self._connected:
             try:
                 self._mqtt.publish(self._status_topic, b'\x00', True, 1)
@@ -79,6 +87,8 @@ class Client:
         self.manager.on_disconnect(reason)
 
     def _connect(self):
+        if self._connected:
+            raise RuntimeError()
         # Connect to the message broker.
 
         self._log.info("Connecting")
@@ -86,19 +96,13 @@ class Client:
         cfg = self._servercfg
         ca = cfg.get("ca", None)
 
-
-        ssl_params = None
-        if ca:
-            ssl_params = {"cert_reqs": ussl.CERT_REQUIRED, "ca_certs": ca}
-
         user = cfg["user"]
         self._status_topic = "{}agents/{}".format(self._base, user)
 
         self._mqtt = MQTTClient(server=cfg["host"], port=cfg["port"],
                                 client_id=user,
                                 keepalive=self._keepalive // 1000,
-                                user=user, password=cfg["password"],
-                                ssl_params=ssl_params, ssl=ca)
+                                user=user, password=cfg["password"], ssl=ca)
 
         # Set last will
         self._mqtt.set_last_will(self._status_topic, b'\x00', True, 1)
@@ -106,75 +110,38 @@ class Client:
         self._mqtt.set_callback(self._on_message)
         # Perform connect
         session_present = self._mqtt.connect(clean_session=self._clean_session)
-        # Connect done, reduce timeout of socket
-        self._mqtt.sock.settimeout(self._keepalive // 8)
         # Publish presence message
         self._mqtt.publish(self._status_topic, b'\xff', True, 1)
 
         self._connected = True
+
+        self._reconnect_task.enable(after=self._keepalive)
+        self._ping_task.enable()
 
         # Inform manager
         self.manager.on_connect(session_present)
 
     def _on_message(self, topic, message, retained):
         # Called when a message was received.
-
-        # Call manager
         self.manager.on_message(topic.decode(), message, retained)
         # Clean up
         gc.collect()
 
-    @staticmethod
-    def _is_elapsed(ts, thres):
-        now = ticks_ms()
-        d = ticks_diff(now, ts)
-        return d > thres
+    def _ping(self):
+        try:
+            self._mqtt.ping()
+        except (OSError, MQTTException) as err:
+            self._reconnect(err)
 
-    def manage(self, call_scheduler=False):
-        """ Perform client management. """
-
-        while self._active:
-            try:
-                self._connect()
-                last_ping = ticks_ms()
-                max_ping = self._keepalive // 2
-                last_pong = ticks_ms()
-                max_pong = self._keepalive
-                while self._active:
-                    try:
-                        operation = self._mqtt.check_msg()
-                        if operation is not None:
-                            last_pong = ticks_ms()
-                        else:
-                            if self._is_elapsed(last_ping, max_ping):
-                                last_ping = ticks_ms()
-                                self._mqtt.ping()
-                            if self._is_elapsed(last_pong, max_pong):
-                                raise MQTTException("Keepalive timeout")
-                    except OSError as err:
-                        if str(err) != "Keepalive timeout":
-                            raise
-
-                        if call_scheduler:
-                            next_task = self._scheduler.handle(block=False)
-                            if next_task is None:
-                                call_scheduler = False
-                            else:
-                                timeout = min(self._keepalive // 8, next_task)
-                                self._mqtt.sock.settimeout(timeout)
-            except (OSError, MQTTException) as err:
-                # Error happened, assume disconnect
-                self._disconnect(err)
-                begin = ticks_ms()
-                if not call_scheduler:
-                    sleep_ms(3000)
-                while call_scheduler and not self._is_elapsed(begin, 3000):
-                    next_task = self._scheduler.handle(block=False)
-                    if next_task is None:
-                        sleep_ms(100)
-                    else:
-                        sleep_ms(next_task)
-        self._disconnect()
+    def _recv(self, delay):
+        if not self._connected:
+            return
+        try:
+            operation = self._mqtt.wait_msg(delay/1000)
+            if operation is not None:
+                self._reconnect_task.enable(after=self._keepalive)
+        except (OSError, MQTTException) as err:
+            self._reconnect(err)
 
     def subscribe(self, topic, qos):
         """ Subscribe to a topic.
@@ -211,5 +178,4 @@ class Client:
         if qos == 2:
             raise ValueError("QoS 2 not supported")
         result = self._mqtt.publish(topic, value, retain, qos)
-        self._last_send = ticks_ms()
         return result
