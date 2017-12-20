@@ -11,6 +11,7 @@ Hardware
 
    base
    bme280
+   camera
    gpio
    trellis
    tsl2561

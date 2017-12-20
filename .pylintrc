@@ -11,7 +11,7 @@ load-plugins=pylint.extensions.docparams
 confidence=
 enable=
 # Disabled warnings that give me false positives
-disable=not-an-iterable,not-context-manager,arguments-differ,expression-not-assigned,unsubscriptable-object
+disable=not-an-iterable,not-context-manager,arguments-differ,expression-not-assigned,unsubscriptable-object,inconsistent-return-statements
 
 [REPORTS]
 

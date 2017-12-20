@@ -2,10 +2,10 @@
 __author__ = "Alexander Sowitzki"
 
 import math
+import pygame # pylint: disable=import-error
 from mauzr.serializer import Bool as BS
 from mauzr.gui import TextMixin, ColorStateMixin, RectBackgroundMixin
 from mauzr.gui import BaseElement, ColorState
-import pygame # pylint: disable=import-error
 
 class AgentIndicator(ColorStateMixin, TextMixin, RectBackgroundMixin,
                      BaseElement):

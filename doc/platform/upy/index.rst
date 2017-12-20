@@ -14,6 +14,4 @@ upy
    wlan
    gpio
    i2c
-   spi
    sigfox
-   led
