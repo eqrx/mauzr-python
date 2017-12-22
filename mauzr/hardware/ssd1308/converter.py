@@ -7,10 +7,10 @@
 .. moduleauthor:: Alexander Sowitzki <dev@eqrx.net>
 """
 
+import mauzr
 from mauzr.util.image.serializer import Pillow as ImageSerializer
-import mauzr.hardware.controller
 
-class Converter(mauzr.hardware.controller.TimedPublisher):
+def converter(core, cfgbase="ssd1308", **kwargs):
     """ Convert images of a topic to command bytes for SSD1308 display.
 
     :param core: Core instance.
@@ -26,41 +26,24 @@ class Converter(mauzr.hardware.controller.TimedPublisher):
 
     **Configuration:**
 
-        - *input*: Input topic (``str``).
-        - *output*: Output topic (``str``).
-        - *interval*: Output frequency in milliseconds (``int``).
+        - *in*: Input topic (``str``).
+        - *out*: Output topic (``str``).
 
     **Input topics:**
 
-        - `input`: Input topic containing a bitmap image (``bytes``).
+        - `in`: Input topic containing a bitmap image (``bytes``).
 
     **Output topics:**
 
-        - `output`: Output topic containing the preformated data (``bytes``).
+        - `out`: Output topic containing the preformated data (``bytes``).
     """
 
-    def __init__(self, core, cfgbase="ssd1308", **kwargs):
-        cfg = core.config[cfgbase]
-        cfg.update(kwargs)
+    cfg = core.config[cfgbase]
+    cfg.update(kwargs)
+    mqtt = core.mqtt
+    mqtt.setup_publish(cfg["out"], None, 0)
 
-        self._out_topic = cfg["out"]
-        name = "<SSD1308Converter@{}>".format(self._out_topic)
-        mauzr.hardware.controller.TimedPublisher.__init__(self, core, name,
-                                                          cfg["interval"])
-
-        core.mqtt.subscribe(cfg["in"], self._on_input,
-                            ImageSerializer("bmp"), 0)
-        core.mqtt.setup_publish(self._out_topic, None, 0)
-        self._buf = None
-        self._mqtt = core.mqtt
-
-    def _publish(self):
-        # Check if new image present
-        if self._buf is not None:
-            self._mqtt.publish(self._out_topic, bytes(self._buf), True)
-            self._buf = None
-
-    def _on_input(self, _topic, image):
+    def _on_input(_topic, image):
         # Get image dimensions
         imwidth, imheight = image.size
         # Number of data pages
@@ -82,16 +65,17 @@ class Converter(mauzr.hardware.controller.TimedPublisher):
                 # Update buffer byte and increment to next byte.
                 buf[index] = bits
                 index += 1
-        self._buf = buf
+        mqtt.publish(cfg["out"], bytes(buf), True)
+    mqtt.subscribe(cfg["in"], _on_input, ImageSerializer("bmp"), 0)
 
 def main():
-    """ Main method for the Converter. """
+    """ Main method for the converter. """
     # Setup core
-    core = mauzr.linux("mauzr", "ssd1308converter")
+    core = mauzr.cpython("mauzr", "ssd1308converter")
     # Setup MQTT
     core.setup_mqtt()
     # Spin up converter
-    Converter(core)
+    converter(core)
     # Run core
     core.run()
 

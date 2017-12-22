@@ -1,7 +1,8 @@
 """ Controller for Trellis devices. """
 __author__ = "Alexander Sowitzki"
 
-import mauzr.serializer
+import mauzr
+from mauzr.serializer import Bool
 
 class Controller:
     """ Driver for trellis devices.
@@ -50,27 +51,28 @@ class Controller:
     def __init__(self, core, cfgbase="trellis", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
+        self._cfg = cfg
 
-        self._base = cfg["base"]
-        self._log = core.logger("<Trellis@{}>".format(self._base))
-        self._button_topics = cfg["button_topics"]
-        self._led_topics = cfg["led_topics"]
-        self._led_default = cfg["led_default"]
-        if len(self._button_topics) != 16 or len(self._led_topics) != 16:
-            raise ValueError("16 topics for each leds and buttons needed.")
-        if len(self._led_default) != 16:
-            raise ValueError("16 default values for leds needed.")
-
+        self._log = core.logger("<Trellis@{}>".format(cfg["base"]))
         self._mqtt = core.mqtt
-        self._button_values = [None] * 16
-        self._led_values = list(cfg["led_default"])
-        core.mqtt.setup_publish(self._base + "leds", None, 0,
-                                default=self._led_bytes())
-        core.mqtt.subscribe(self._base + "buttons", self._on_buttons, None, 0)
-        [core.mqtt.subscribe(topic, self._on_led,
-                             mauzr.serializer.Bool, 0)
+
+        self._button_topics = [None] * 16
+        self._button_values = [False] * 16
+        self._led_topics = [None] * 16
+        self._led_values = [False] * 16
+
+        for position, subcfg in cfg["elements"].items():
+            index = (position // 10 * 4) + (position % 10)
+            self._button_topics[index] = subcfg["button"]
+            self._led_topics[index] = subcfg["led"]
+            self._led_values[index] = subcfg["default"]
+
+        self._mqtt.setup_publish(cfg["base"] + "leds", None, 0,
+                                 default=self._led_bytes())
+        self._mqtt.subscribe(cfg["base"] + "buttons", self._on_buttons, None, 0)
+        [self._mqtt.subscribe(topic, self._on_led, Bool, 0)
          for topic in self._led_topics if topic is not None]
-        [core.mqtt.setup_publish(topic, mauzr.serializer.Bool, 0)
+        [self._mqtt.setup_publish(topic, Bool, 0)
          for topic in self._button_topics if topic is not None]
 
     def _on_buttons(self, _topic, buttons):
@@ -95,7 +97,8 @@ class Controller:
                     self._led_values[i] = val
                     changed = True
         if changed:
-            self._mqtt.publish(self._base + "leds", self._led_bytes(), True)
+            self._mqtt.publish(self._cfg["base"] + "leds",
+                               self._led_bytes(), True)
 
     def _led_bytes(self):
         buf = [0] * 8
@@ -111,3 +114,17 @@ class Controller:
             data.append(entry & 0xff)
             data.append(entry >> 8)
         return bytes(data)
+
+def main():
+    """ Main method for the controller. """
+    # Setup core
+    core = mauzr.cpython("mauzr", "trelliscontroller")
+    # Setup MQTT
+    core.setup_mqtt()
+    # Spin up converter
+    Controller(core)
+    # Run core
+    core.run()
+
+if __name__ == "__main__":
+    main()

@@ -1,13 +1,12 @@
-""" Driver for BME280 devices. """
+""" Controller for BME280 devices. """
 __author__ = "Alexander Sowitzki"
 
-
 import struct
-import mauzr.hardware.driver
-import mauzr.serializer
+import mauzr
+from mauzr.serializer import Struct
 
 # pylint: disable=too-many-instance-attributes
-class Driver(mauzr.hardware.driver.DelayedPollingDriver):
+class Controller:
     """ Driver for BME280 devices.
 
     :param core: Core instance.
@@ -17,38 +16,15 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
     :param kwargs: Keyword arguments that will be merged into the config.
     :type kwargs: dict
 
-    **Required core units**:
-
-        - i2c
-        - mqtt
-
-    **Configuration:**
-
-        - **base** (:class:`str`) - Topic base for the sensor.
-        - **address** (:class:`int`) - I2C address of the sensor.
-        - **interval** (:class:`int`) - Fetch interval in milliseconds.
-        - **corrections** (:class:`tuple`) - A tuple of three values that
-            will be added to humidity, pressure and temperature readings \
-            before publish. These values may be None, integer for humidity \
-            and pressure and float for the temperature.
-
-    **Output Topics:**
-
-        - **/humidity** (``B``) - humidity in %.
-        - **/pressure** (``!I``) - pressure in Pascal.
-        - **/temperature** (``!f``) - Termperature im °C.
     """
 
     def __init__(self, core, cfgbase="bme280", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self._address = cfg["address"]
         self._base = cfg["base"]
-
+        self._mqtt = core.mqtt
         self._corrections = cfg.get("corrections", (None, None, None))
-
-        self._i2c = core.i2c
 
         self._t1, self._t2, self._t3, self._t4 = [None] * 4
         self._p1, self._p2, self._p3, self._p4 = [None] * 4
@@ -56,49 +32,35 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
         self._p9, self._h1, self._h2, self._h3 = [None] * 4
         self._h4, self._h5, self._h6, self._tfine = [None] * 4
 
-        core.mqtt.setup_publish(self._base + "temperature",
-                                mauzr.serializer.Struct("!f"), 0)
-        core.mqtt.setup_publish(self._base + "pressure",
-                                mauzr.serializer.Struct("!I"), 0)
-        core.mqtt.setup_publish(self._base + "humidity",
-                                mauzr.serializer.Struct("B"), 0)
+        self._mqtt.subscribe(self._base + "calibrations/pt",
+                             self._on_pt_corrections,
+                             Struct("<HhhHhhhhhhhhBB"), 0)
+        self._mqtt.subscribe(self._base + "calibrations/h",
+                             self._on_h_correction, None, 0)
+        self._mqtt.subscribe(self._base + "readout", self._on_readout, None, 0)
 
-        name = "<BME280@{}>".format(self._base)
-        mauzr.hardware.driver.DelayedPollingDriver.__init__(self, core, name,
-                                                            cfg["interval"],
-                                                            12000)
+        self._mqtt.setup_publish(self._base + "temperature", Struct("!f"), 0)
+        self._mqtt.setup_publish(self._base + "pressure", Struct("!I"), 0)
+        self._mqtt.setup_publish(self._base + "humidity", Struct("B"), 0)
+        self._mqtt.setup_publish(self._base + "poll_interval", Struct("!I"), 0,
+                                 cfg["interval"])
 
-    @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
-    def _init(self):
+    def _on_pt_corrections(self, _topic, corrections):
         self._t1, self._t2, self._t3, self._p1, \
             self._p2, self._p3, self._p4, self._p5, \
             self._p6, self._p7, self._p8, self._p9, \
-            _, self._h1 = self._i2c.read_register(self._address, 0x88,
-                                                  fmt="<HhhHhhhhhhhhBB")
+            _, self._h1 = corrections
 
-        buf = self._i2c.read_register(self._address, 0xE1, amount=7)
+    def _on_h_correction(self, _topic, buf):
         self._h6 = struct.unpack_from("<b", buf, 6)[0]
         self._h2, self._h3 = struct.unpack("<hB", buf[0:3])
         self._h4 = (struct.unpack_from("<b", buf, 3)[0] << 4) | (buf[4] & 0xf)
         self._h5 = (struct.unpack_from("<b", buf, 5)[0] << 4) | (buf[4] >> 4)
         self._tfine = 0
-        self._i2c.write(self._address, [0xf4, 0x3f])
 
-        super()._init()
-
-    @mauzr.hardware.driver.guard(OSError, suppress=True)
-    def _poll(self):
-        """ Begin reading a new sample. """
-
-        self._i2c.write(self._address, [0xf2, 1])
-        self._i2c.write(self._address, [0xf4, 0x25])
-        self._receive_task.enable()
-
-    @mauzr.hardware.driver.guard(OSError, suppress=True)
-    def _receive(self):
-        """ Finalize reading and publish values. """
-
-        readout = self._i2c.read_register(self._address, 0xf7, amount=8)
+    def _on_readout(self, _topic, readout):
+        if self._t1 is None or self._h6 is None:
+            return
         pres = ((readout[0] << 16) | (readout[1] << 8) | readout[2]) >> 4
         temp = ((readout[3] << 16) | (readout[4] << 8) | readout[5]) >> 4
         hum = (readout[6] << 8) | readout[7]
@@ -142,3 +104,17 @@ class Driver(mauzr.hardware.driver.DelayedPollingDriver):
             if cor is not None:
                 val += cor
             self._mqtt.publish(self._base + lbl, val, True)
+
+def main():
+    """ Main method for the Controller. """
+    # Setup core
+    core = mauzr.linux("mauzr", "bme280controller")
+    # Setup MQTT
+    core.setup_mqtt()
+    # Spin up controller
+    Controller(core)
+    # Run core
+    core.run()
+
+if __name__ == "__main__":
+    main()

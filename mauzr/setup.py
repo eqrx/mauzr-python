@@ -125,7 +125,8 @@ class ESPFlashCommand(setuptools.Command):
         (root/"build"/"esp"/"8266").mkdir(parents=True, exist_ok=True)
 
         cmd = f"export PORT={self.port} && " if self.port else ""
-        if self.board == "esp8266":
+        cmd += "export FLASH_MODE=dout && " if self.board == "esp8285" else ""
+        if self.board in ("esp8266", "esp8285"):
             cmd += "rm -rf esp8266/build/* && make -C esp8266 all "
         elif self.board == "esp32":
             cmd += "make -C esp32 "

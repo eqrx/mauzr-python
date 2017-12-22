@@ -59,8 +59,12 @@ setuptools.setup(
             'mauzr-imageviewer=mauzr.util.image.viewer:main',
             'mauzr-rrdlogger=mauzr.util.rrd.logger:main',
             'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main',
+            'mauzr-bme280controller=mauzr.hardware.bme280.controller:main',
+            'mauzr-pca9685controller=mauzr.hardware.pca9685.controller:main',
             'mauzr-ssd1308converter=mauzr.hardware.ssd1308.converter:main',
-            'mauzr-ws2812converter=mauzr.hardware.ws2812.converter:main'
+            'mauzr-trelliscontroller=mauzr.hardware.trellis.controller:main',
+            'mauzr-tsl2561controller=mauzr.hardware.tsl2561.controller:main',
+            'mauzr-ws2812converter=mauzr.hardware.ws2812.converter:main',
         ]
     }
 )

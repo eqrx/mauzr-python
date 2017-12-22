@@ -1,6 +1,7 @@
 """ Base for drivers. """
 __author__ = "Alexander Sowitzki"
 
+from mauzr.serializer import Struct
 
 def guard(exceptions, suppress=False, ignore_ready=False):
     """ Create decorator to handle raised exceptions for drivers.
@@ -121,8 +122,10 @@ class PollingDriver(Driver):
 
     :param core: Core instance.
     :type core: object
-    :param name: Log name of this.
+    :param name: Driver name.
     :type name: str
+    :param base: Base topic of the driver.
+    :type base: str
     :param poll_interval: Delay between polls in milliseconds
     :type poll_interval: int
     :param init_delay: Delay between inits in milliseconds.
@@ -133,9 +136,25 @@ class PollingDriver(Driver):
     .. automethod:: _poll
     """
 
-    def __init__(self, core, name, poll_interval, init_delay=3000):
-        Driver.__init__(self, core, name, init_delay)
-        self.poll_task = core.scheduler(self._poll, poll_interval, False)
+    NAME_FMT = "<{}@{}>"
+    """ String format for the log name. """
+
+    def __init__(self, core, base, name, poll_interval, init_delay=3000):
+        Driver.__init__(self, core,
+                        self.NAME_FMT.format(name, base), init_delay)
+        self.poll_task = core.scheduler(self._dispatch_poll, poll_interval,
+                                        False)
+        self._poll_interval = poll_interval
+        self._mqtt.subscribe(base + "poll_interval", self._on_interval,
+                             Struct("!I"), 0)
+
+    def _on_interval(self, _topic, interval):
+        self._poll_interval = interval
+        if self._ready:
+            self.poll_task.enable(after=interval, instant=True)
+
+    def _dispatch_poll(self):
+        self._poll()
 
     def _poll(self):
         raise NotImplementedError()
@@ -143,16 +162,18 @@ class PollingDriver(Driver):
     def _set_ready(self, value):
         super()._set_ready(value)
         if value:
-            self.poll_task.enable(instant=True)
+            self.poll_task.enable(after=self._poll_interval, instant=True)
         else:
             self.poll_task.disable()
 
 class DelayedPollingDriver(PollingDriver):
-    """ Base for drivers that poll values regularly and need a delay
+    """ Base for divers that poll values regularly and need a delay
     between value poll and fetch.
 
     :param core: Core instance.
     :type core: object
+    :param base: Topic base of the driver.
+    :type base: str
     :param name: Log name of this.
     :type name: str
     :param poll_interval: Delay between polls in milliseconds
@@ -163,9 +184,10 @@ class DelayedPollingDriver(PollingDriver):
     :type init_delay: int
     """
 
-    def __init__(self, core, name, poll_interval,
+    def __init__(self, core, base, name, poll_interval,
                  receive_delay, init_delay=3000):
-        PollingDriver.__init__(self, core, name, poll_interval, init_delay)
+        PollingDriver.__init__(self, core, base, name,
+                               poll_interval, init_delay)
         # Delay must be smaller than interval.
         if poll_interval <= receive_delay:
             raise ValueError("Poll interval ({}) must be greater "
@@ -179,10 +201,12 @@ class DelayedPollingDriver(PollingDriver):
 
         raise NotImplementedError()
 
+    def _dispatch_poll(self):
+        super()._dispatch_poll()
+        self._receive_task.enable()
+
     def _set_ready(self, value):
         super()._set_ready(value)
         # Enable/Disable task according to ready state.
-        if value:
-            self._receive_task.enable(instant=True)
-        else:
+        if not value:
             self._receive_task.disable()

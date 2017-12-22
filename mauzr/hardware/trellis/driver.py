@@ -43,8 +43,8 @@ class Driver(mauzr.hardware.driver.PollingDriver):
         self._base = cfg["base"]
 
         name = "<Trellis@{}>".format(self._base)
-        mauzr.hardware.driver.PollingDriver.__init__(self, core, name,
-                                                     cfg["interval"])
+        mauzr.hardware.driver.PollingDriver.__init__(self, core, self._base,
+                                                     name, cfg["interval"])
         self._i2c = core.i2c
         self._address = cfg["address"]
         self._keys = None

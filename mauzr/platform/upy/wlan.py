@@ -51,8 +51,8 @@ class Manager:
 
         return self._wlan.isconnected()
 
-    def _connect(self, ssid, password, timeout):
-        self._wlan.connect(ssid, password, timeout)
+    def _connect(self, ssid, password, _timeout):
+        self._wlan.connect(ssid, password)
 
     def _maintain(self):
         # Maintain wlan connection.

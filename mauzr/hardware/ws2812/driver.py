@@ -1,6 +1,30 @@
 """ Driver for WS2812 leds. """
 
-import spidev # pylint: disable=import-error
+
+def _setup_direct(core, cfg):
+    import machine # pylint: disable=import-error
+    import neopixel # pylint: disable=import-error
+    import sys
+
+    if sys.platform == "esp32":
+        n = neopixel.NeoPixel(machine.Pin(cfg["pin"]), cfg["amount"],
+                              timing=True)
+    else:
+        n = neopixel.NeoPixel(machine.Pin(cfg["pin"]), cfg["amount"])
+
+    def _on_neopixel(_topic, value):
+        for i in range(n.n):
+            n[i] = (value[i*3], value[i*3+1], value[i*3+2])
+        n.write()
+    core.mqtt.subscribe(cfg["topic"], _on_neopixel, None, 0)
+
+def _setup_spidev(core, cfg):
+    import spidev # pylint: disable=import-error
+    spi = spidev.SpiDev()
+    spi.open(cfg["bus"], cfg["device"])
+
+    core.mqtt.subscribe(cfg["topic"], lambda t, v: spi.xfer(list(v), 3200000),
+                        None, 0)
 
 def driver(core, cfgbase="ws2812", **kwargs):
     """ Driver for WS2812 leds.
@@ -16,8 +40,7 @@ def driver(core, cfgbase="ws2812", **kwargs):
     cfg = core.config[cfgbase]
     cfg.update(kwargs)
 
-    spi = spidev.SpiDev()
-    spi.open(cfg["bus"], cfg["device"])
-
-    core.mqtt.subscribe(cfg["topic"], lambda t, v: spi.xfer(list(v), 3200000),
-                        None, 0)
+    try:
+        _setup_direct(core, cfg)
+    except ImportError:
+        _setup_spidev(core, cfg)
