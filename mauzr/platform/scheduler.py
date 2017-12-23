@@ -56,6 +56,7 @@ class Task:
         """ Disable / cancel this task. No effect if already running. """
 
         self.execution = None
+        return self
 
     @property
     def enabled(self):
