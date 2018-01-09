@@ -4,6 +4,7 @@ __author__ = "Alexander Sowitzki"
 import enum
 import mauzr.serializer
 from mauzr.serializer import Bool as BS
+from mauzr.serializer import String as SS
 
 class BoolCondition(enum.Enum):
     """ Condition for boolean channels. """
@@ -290,3 +291,38 @@ def gate_bool(core, topic):
 
     aggregate(core, ((topic, BS), (con_tpc, BCS), (req_tpc, BS), (tgl_tpc, BS)),
               _handler, False, topic, BS, 0)
+
+def to_string(core, topic, ser, converter=str):
+    """ Convert messages from a topic into another topic as string.
+
+    :param core: Core instance.
+    :type core: object
+    :param topic: Message will be read from topic and published to \
+                  topic + "/str".
+    :type topic: str
+    :param ser: Serializer to use for deserialization
+    :type ser: object
+    :param converter: Callable to convert deserialized value to string.
+    :type converter: callable
+    """
+
+    convert(core, converter, True, None, topic, topic + "/str", ser, SS, 0)
+
+def from_string(core, topic, retain, ser, converter):
+    """ Convert string messages from a topic into another topic and type.
+
+    :param core: Core instance.
+    :type core: object
+    :param topic: Message will be read from topic + "/str" \
+                  and published to topic.
+    :type topic: str
+    :param retain: If the published message shall be retained.
+    :type retain: Bool
+    :param ser: Serializer to use for serialization
+    :type ser: object
+    :param converter: Callable to convert deserialized string value to \
+                      something interpretable by the serializer.
+    :type converter: callable
+    """
+
+    convert(core, converter, retain, None, topic + "/str", topic, SS, ser, 0)
