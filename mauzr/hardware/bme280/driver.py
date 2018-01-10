@@ -35,6 +35,9 @@ class Driver(DelayedPollingDriver):
 
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _init(self):
+        if not self._mqtt.connected:
+            raise OSError("MQTT not connected")
+
         pt_calibrations = self._i2c.read_register(self._address, 0x88,
                                                   fmt="<HhhHhhhhhhhhBB")
         h_calibration = self._i2c.read_register(self._address, 0xE1, amount=7)

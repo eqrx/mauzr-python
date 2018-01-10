@@ -63,8 +63,7 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
         self.tasks.append(task)
         return task
 
-    @staticmethod
-    def idle(delay):
+    def idle(self, delay):
         # Wait the specified amount of time in milliseconds.
 
         time.sleep(delay/1000)

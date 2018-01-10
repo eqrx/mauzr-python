@@ -159,10 +159,8 @@ class Scheduler:
                 task.execute()
         elif active_tasks:
             # No pending tasks but active tasks, wait for the next one
-            d = min([task.pending_in for task in active_tasks])
+            d = min([task.pending_in for task in active_tasks] + [300])
             self.idle(d)
-            return max(0, d)
-
         else:
             # No active tasks, go idle
             self._wait()

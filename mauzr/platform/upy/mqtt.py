@@ -32,7 +32,7 @@ class Client:
         self.manager = None
         self._mqtt = None
         self._status_topic = None
-        self._connected = False
+        self.connected = False
         self._active = True
         self._last_send = None
 
@@ -76,18 +76,18 @@ class Client:
     def _disconnect(self, reason=None):
         self._reconnect_task.disable()
         self._ping_task.disable()
-        if self._connected:
+        if self.connected:
             try:
                 self._mqtt.publish(self._status_topic, b'\x00', True, 1)
                 # Disconnect cleanly
                 self._mqtt.disconnect()
             except OSError:
                 pass
-        self._connected = False
+        self.connected = False
         self.manager.on_disconnect(reason)
 
     def _connect(self):
-        if self._connected:
+        if self.connected:
             raise RuntimeError()
         # Connect to the message broker.
 
@@ -113,7 +113,7 @@ class Client:
         # Publish presence message
         self._mqtt.publish(self._status_topic, b'\xff', True, 1)
 
-        self._connected = True
+        self.connected = True
 
         self._reconnect_task.enable(after=self._keepalive)
         self._ping_task.enable()
@@ -134,7 +134,7 @@ class Client:
             self._reconnect(err)
 
     def _recv(self, delay):
-        if not self._connected:
+        if not self.connected:
             return
         try:
             operation = self._mqtt.wait_msg(delay/1000)
