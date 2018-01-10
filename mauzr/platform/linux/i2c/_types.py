@@ -7,9 +7,9 @@ class Message(ctypes.Structure):
     """ Represent the struct i2c_msg from linux/i2c-dev.h. """
 
     _fields_ = [('addr', ctypes.c_uint16),
-                ('flags', ctypes.c_ushort),
-                ('len', ctypes.c_short),
-                ('buf', ctypes.POINTER(ctypes.c_char))]
+                ('flags', ctypes.c_uint16),
+                ('len', ctypes.c_int16),
+                ('buf', ctypes.POINTER(ctypes.c_uint8))]
 
     __slots__ = [name for name, type in _fields_]
 
@@ -17,7 +17,7 @@ class IoctlData(ctypes.Structure):
     """ Represent the struct i2c_rdwr_ioctl_data from linux/i2c-dev.h. """
 
     _fields_ = [('msgs', ctypes.POINTER(Message)),
-                ('nmsgs', ctypes.c_int)]
+                ('nmsgs', ctypes.c_int32)]
 
     __slots__ = [name for name, type in _fields_]
 
