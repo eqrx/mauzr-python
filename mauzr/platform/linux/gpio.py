@@ -1,6 +1,10 @@
 """ Access GPIO via Sysfs. """
 __author__ = "Alexander Sowitzki"
 
+import struct
+import time
+import os
+import mmap
 import select
 import io
 import contextlib
@@ -32,6 +36,7 @@ class Pins:
         # Schedule to check for changes every 100 ms
 
         self.listeners = []
+        core.add_context(self)
 
     def __enter__(self):
         # Start unit.
@@ -151,3 +156,64 @@ class Pins:
             # Inform all listeners
             [listener(pin["name"], self[pin["name"]])
              for listener in self.listeners]
+
+class RaspberryPins(Pins):
+    """ Use GPIO pins on the raspberry.
+
+    :param core: Core instance.
+    :type core: mauzr.Core
+    :param cfgbase: Configuration entry for this unit.
+    :type cfgbase: str
+    :param kwargs: Additional configuration.
+    :type kwargs: dict
+    """
+
+    PULLUPDN_OFFSET = 37
+    PULLUPDNCLK_OFFSET = 38
+
+    def __init__(self, core, cfgbase="gpio", **kwargs):
+        Pins.__init__(self, core, cfgbase, **kwargs)
+        self.gpiomem = None
+
+    def __enter__(self):
+        Pins.__enter__(self)
+
+        fd = os.open("/dev/gpiomem", os.O_RDWR | os.O_SYNC)
+        self.gpiomem = mmap.mmap(fd, 4*1024)
+
+        return self
+
+    def __exit__(self, *exc_details):
+        Pins.__exit__(self, *exc_details)
+
+        self.gpiomem.close()
+
+    def _setup_pull(self, name, pull):
+        m = self.gpiomem
+
+        # Slice for set register
+        v_loc = slice(self.PULLUPDN_OFFSET*4, self.PULLUPDN_OFFSET*4+4)
+        # Get current setting and clear pull
+        v_clear = struct.unpack("<I", m[v_loc])[0] & ~3
+        v = v_clear
+
+        # Modify pull
+        if pull == "down":
+            v |= 1
+        elif pull == "up":
+            v |= 2
+
+        # Slice for clocking register
+        c_offset = (self.PULLUPDNCLK_OFFSET + name//32) * 4
+        c_loc = slice(c_offset, c_offset + 4)
+
+        # Write value to set register
+        m[v_loc] = struct.pack("<I", v)
+        time.sleep(0.001)
+        # Specify pin to apply
+        m[c_loc] = struct.pack("<I", 1 << (name % 32))
+        time.sleep(0.001)
+        # Clear set register
+        m[v_loc] = struct.pack("<I", v_clear)
+        # Clear clocking register
+        m[c_loc] = struct.pack("<I", 0)
