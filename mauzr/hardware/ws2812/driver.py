@@ -13,8 +13,9 @@ def _setup_direct(core, cfg):
         n = neopixel.NeoPixel(machine.Pin(cfg["pin"]), cfg["amount"])
 
     def _on_neopixel(_topic, value):
+        mv = memoryview(value)
         for i in range(n.n):
-            n[i] = (value[i*3], value[i*3+1], value[i*3+2])
+            n[i] = mv[i*3:i*3+3]
         n.write()
     core.mqtt.subscribe(cfg["topic"], _on_neopixel, None, 0)
 
