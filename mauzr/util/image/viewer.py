@@ -1,17 +1,18 @@
-#!/usr/bin/python3
 """ Functions helping to view images. """
-__author__ = "Alexander Sowitzki"
 
 import tkinter
 import tkinter.ttk
-import PIL.ImageTk # pylint: disable=import-error
-import PIL.ImageFont # pylint: disable=import-error
-import PIL.ImageDraw # pylint: disable=import-error
-import cv2 # pylint: disable=import-error
+import PIL.ImageTk  # pylint: disable=import-error
+import PIL.ImageFont  # pylint: disable=import-error
+import PIL.ImageDraw  # pylint: disable=import-error
+import cv2  # pylint: disable=import-error
 import mauzr
 import mauzr.util.image.operation
 from mauzr.util.image.operation import resize
 from mauzr.util.image.serializer import OpenCV as ImageSerializer
+
+__author__ = "Alexander Sowitzki"
+
 
 class Viewer:
     """ Display an image stream via GUI.
@@ -73,11 +74,10 @@ class Viewer:
 
         maximum = (self.panel.winfo_width(), self.panel.winfo_height())
         target = self._last_image_size
-        target = (int(target[0] * maximum[1]/target[1]),
-                  int(target[1] * maximum[1]/target[1]))
-        if target[0] > maximum[0]:
-            target = (int(target[0] * maximum[0]/target[0]),
-                      int(target[1] * maximum[0]/target[0]))
+
+        larger_dim = 0 if target[0] > maximum[0] else 1
+        factor = maximum[larger_dim]/target[larger_dim]
+        target = (int(target[0] * factor), int(target[1] * factor))
         self._resizer = resize(resize=target)
 
     def _on_key(self, event):
@@ -85,7 +85,8 @@ class Viewer:
             self._toggle_freeze()
 
     def _on_window_resize(self, event):
-        self._panel_size = (self.panel.winfo_width(), self.panel.winfo_height())
+        self._panel_size = (self.panel.winfo_width(),
+                            self.panel.winfo_height())
         self._set_resizer()
 
     def _toggle_freeze(self):
@@ -113,20 +114,16 @@ class Viewer:
             self._last_image_size = shape
             self._set_resizer()
         self._last_image = self._resizer(image)
-        #self._last_image = image
+
 
 def main():
-    """ Entry point for the image viewer. """
+    """ Entry point. """
 
     root = tkinter.Tk()
     root.wm_title("Image viewer")
     root.geometry("800x480+0+0")
 
     core = mauzr.cpython("mauzr", "imageviewer")
-    core.setup_mqtt()
     Viewer(core, root)
     with core:
         root.mainloop()
-
-if __name__ == "__main__":
-    main()

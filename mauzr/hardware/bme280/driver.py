@@ -1,9 +1,11 @@
 """ Driver for BME280 devices. """
-__author__ = "Alexander Sowitzki"
 
 import mauzr
-from  mauzr.hardware.driver import DelayedPollingDriver
+from mauzr.hardware.driver import DelayedPollingDriver
 from mauzr.serializer import Struct
+
+__author__ = "Alexander Sowitzki"
+
 
 # pylint: disable=too-many-instance-attributes
 class Driver(DelayedPollingDriver):

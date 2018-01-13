@@ -1,7 +1,9 @@
 """ C interface types for I2C access. """
-__author__ = "Alexander Sowitzki"
 
 import ctypes
+
+__author__ = "Alexander Sowitzki"
+
 
 class Message(ctypes.Structure):
     """ Represent the struct i2c_msg from linux/i2c-dev.h. """
@@ -12,6 +14,7 @@ class Message(ctypes.Structure):
                 ('buf', ctypes.POINTER(ctypes.c_uint8))]
 
     __slots__ = [name for name, type in _fields_]
+
 
 class IoctlData(ctypes.Structure):
     """ Represent the struct i2c_rdwr_ioctl_data from linux/i2c-dev.h. """

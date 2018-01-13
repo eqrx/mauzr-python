@@ -1,8 +1,9 @@
 """ Driver for Trellis devices. """
-__author__ = "Alexander Sowitzki"
-
 
 import mauzr.hardware.driver
+
+__author__ = "Alexander Sowitzki"
+
 
 class Driver(mauzr.hardware.driver.PollingDriver):
     """ Driver for trellis devices.

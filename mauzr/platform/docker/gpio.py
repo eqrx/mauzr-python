@@ -1,8 +1,8 @@
 """ Access GPIO via Sysfs. """
-__author__ = "Alexander Sowitzki"
 
-# pylint: disable = no-member,import-error
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO  # pylint: disable = no-member,import-error
+
+__author__ = "Alexander Sowitzki"
 
 
 class Pins:

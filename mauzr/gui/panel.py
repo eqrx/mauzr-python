@@ -1,10 +1,12 @@
 """ GUI panels. """
-__author__ = "Alexander Sowitzki"
 
-import pygame # pylint: disable=import-error
+import pygame  # pylint: disable=import-error
 from mauzr.gui.base import Vector
 from mauzr.gui.elements import Muter, Acceptor, AgentIndicator, Indicator
 from mauzr.gui.elements import ToggleController, SimpleController
+
+__author__ = "Alexander Sowitzki"
+
 
 class Table:
     """ Provide MQTT support.
@@ -19,14 +21,14 @@ class Table:
     **Configuration (mqtt section):**
 
         - **size** (:class:`dict`): Size settings.
-            **pixels** (:class:`tuple`): Display width and size in pixels (int).
+            **pixels** (:class:`tuple`): Display width and height \
+                                         in pixels (int).
             **cells** (:class:`tuple`): Row and cell count (int).
         - **fps** (:class:`int`): Refresh rate per second.
         - **title** (:class:`str`): Title of the window.
     """
 
     def __init__(self, core, cfgbase="panel", **kwargs):
-        #cell_size, draw_size, offset, fps=10):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
@@ -51,7 +53,6 @@ class Table:
         self.elements.append(e)
         e = Acceptor(*self.layout(reversed(self._cell_count) - (2, 1)), self)
         self.elements.append(e)
-
 
     def mute(self, value):
         """ Set mute of audio notifications.

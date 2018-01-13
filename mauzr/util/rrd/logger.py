@@ -1,12 +1,13 @@
-#!/usr/bin/python3
 """ Support for logging data to RRD databases. """
-__author__ = "Alexander Sowitzki"
 
 import pathlib
 import time
-import rrdtool # pylint: disable=import-error
+import rrdtool  # pylint: disable=import-error
 import mauzr
-from mauzr.serializer import Struct
+from mauzr.serializer import Struct as SS
+
+__author__ = "Alexander Sowitzki"
+
 
 class RDDLogger:
     """ Log topics in RRD files.
@@ -30,16 +31,16 @@ class RDDLogger:
           - **qos** (:class:`int`) - Subscribe QoS.
           - **format** (:class:`str`) - Struct format of the topic.
           - **path** (:class:`str`) - Storage path for database.
-          - **stepsize** (:class:`str`) - Time in seconds between logged values.
-          - **timeout** (:class:`str`) - Time in seconds after topic is \
-            considered timed out.
+          - **stepsize** (:class:`str`) - Seconds between logged values.
+          - **timeout** (:class:`str`) - Seconds after topic is \
+                                         considered timed out.
           - **valuerange** (:class:`tuple`) - Mininum and maxium values \
-            to store.
+                                              to store.
           - **topic** (:class:`str`) - Input topic.
           - **average** (:class:`dict`) - Average records:
 
             - **minratio** (:class:`float`) - Minium ratio of known values \
-              in range to form average.
+                                              in range to form average.
             - **range** (:class:`int`) - Operation range in seconds.
             - **amount** (:class:`int`) - Amount of results to archive.
 
@@ -63,7 +64,7 @@ class RDDLogger:
             topic = cfgset["topic"]
             path = pathlib.Path(cfgset["path"])
             self._files[topic] = path
-            mqtt.subscribe(topic, self._on_message, Struct(cfgset["format"]), 0)
+            mqtt.subscribe(topic, self._on_message, SS(cfgset["format"]), 0)
             if path.is_file():
                 continue
             # pylint: disable=no-member
@@ -84,13 +85,8 @@ class RDDLogger:
         rrdtool.update(str(self._files[topic]),
                        "{}:{}".format(int(time.time()), value))
 
+
 def main():
-    """ Entry point for the rrd logger. """
+    """ Entry point. """
 
-    core = mauzr.linux("mauzr", "rrdlogger")
-    core.setup_mqtt()
-    RDDLogger(core)
-    core.run()
-
-if __name__ == "__main__":
-    main()
+    mauzr.linux("mauzr", "rrdlogger", RDDLogger)

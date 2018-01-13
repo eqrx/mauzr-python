@@ -1,7 +1,9 @@
 """  Access GPIO. """
+
+import machine  # pylint: disable=import-error
+
 __author__ = "Alexander Sowitzki"
 
-import machine # pylint: disable=import-error
 
 class GPIO:
     """ Use GPIO pins. """
@@ -23,8 +25,8 @@ class GPIO:
 
         :param name: ID of the pin.
         :type name: str
-        :param edge: Edges to inform listeners about. May be "none", "rising", \
-                     "falling" or "both".
+        :param edge: Edges to inform listeners about. May be "none", \
+                     "rising", "falling" or "both".
         :type edge: str
         :param pullup: Pull mode of the pin. May be "none", "up" or "down".
         :type pullup: str

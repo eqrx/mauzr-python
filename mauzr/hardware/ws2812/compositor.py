@@ -1,13 +1,10 @@
-"""
-.. module:: mauzr.hardware.ws2812.controller
-   :platform: all
-   :synopsis: Controller for ws2812 chains.
-
-.. moduleauthor:: Alexander Sowitzki <dev@eqrx.net>
-"""
+""" Controller for ws2812 chains."""
 
 import math
 from mauzr.serializer import Struct
+
+__author__ = "Alexander Sowitzki"
+
 
 class Compositor:
     """ Helper to composite pixel colors.
@@ -66,6 +63,7 @@ class Compositor:
         """ Return the color a a pixel channel. """
 
         raise NotImplementedError()
+
 
 def create_ring_coordinates(radius, count):
     """ Create coordinates arranged in a ring.

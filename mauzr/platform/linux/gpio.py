@@ -1,5 +1,4 @@
 """ Access GPIO via Sysfs. """
-__author__ = "Alexander Sowitzki"
 
 import struct
 import time
@@ -8,6 +7,9 @@ import mmap
 import select
 import io
 import contextlib
+
+__author__ = "Alexander Sowitzki"
+
 
 class Pins:
     """ Use GPIO pins.
@@ -156,6 +158,7 @@ class Pins:
             # Inform all listeners
             [listener(pin["name"], self[pin["name"]])
              for listener in self.listeners]
+
 
 class RaspberryPins(Pins):
     """ Use GPIO pins on the raspberry.

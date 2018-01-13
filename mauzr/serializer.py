@@ -6,6 +6,7 @@ try:
 except ImportError:
     import ustruct as struct
 
+
 class Enum:
     """ Serialize messages represented by an :class:`enum.Enum`.
 
@@ -17,7 +18,7 @@ class Enum:
     """
 
     def __init__(self, enum, fmt):
-        self.enum = enum
+        self.enum_cls = enum
         self.fmt = fmt
 
     def pack(self, enum):
@@ -39,13 +40,14 @@ class Enum:
         :rtype: enum.enum
         """
 
-        return self.enum(struct.unpack(self.fmt, data)[0])
+        return self.enum_cls(struct.unpack(self.fmt, data)[0])
 
     def __eq__(self, other):
         # Check if enum and fmt are the same
         if isinstance(other, self.__class__):
-            return self.enum == other.enum and self.fmt == other.fmt
+            return self.enum_cls == other.enum and self.fmt == other.fmt
         return False
+
 
 class Struct:
     """ Serialize values using :mod:`struct`
@@ -98,6 +100,7 @@ class Struct:
             return self.fmt == other.fmt
         return False
 
+
 class JSON:
     """ Serialize values using :mod:`json`. """
 
@@ -126,6 +129,7 @@ class JSON:
 
         import json
         return json.loads(data)
+
 
 class String:
     """ Serialize values as strings :mod:`struct`. """

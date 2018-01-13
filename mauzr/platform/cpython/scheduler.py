@@ -1,9 +1,11 @@
 """ Posix scheduler. """
-__author__ = "Alexander Sowitzki"
 
 import time
 import threading
 import mauzr.platform.scheduler
+
+__author__ = "Alexander Sowitzki"
+
 
 class Task(mauzr.platform.scheduler.Task):
     """ Posix implementation of task.
@@ -25,6 +27,7 @@ class Task(mauzr.platform.scheduler.Task):
         # The current time in ms.
 
         return int(time.time()*1000)
+
 
 class Scheduler(mauzr.platform.scheduler.Scheduler):
     """ Scheduler for the posix platform.

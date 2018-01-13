@@ -1,7 +1,9 @@
 """ Common base for MQTT clients. """
-__author__ = "Alexander Sowitzki"
 
 import logging
+
+__author__ = "Alexander Sowitzki"
+
 
 class Manager:
     """ Connect to an MQTT broker to exchange messages via topics.
@@ -44,7 +46,6 @@ class Manager:
         self._delayed_publishes = []
 
         core.add_context(self)
-
 
     def __enter__(self):
         self.mqtt.set_host(**self._hosts[0])
@@ -175,13 +176,14 @@ class Manager:
             if qos != config["qos"] or serializer != config["serializer"]:
                 raise ValueError("Topic {} is already subscribed "
                                  "with other settings".format(topic))
+            config["callbacks"].append(callback)
         else:
             # Topic new, create config
-            config = {"topic": topic, "qos": qos, "callbacks": [],
+            config = {"topic": topic, "qos": qos, "callbacks": [callback],
                       "serializer": serializer}
             self._subscriptions[topic] = config
 
-        config["callbacks"].append(callback)
+
 
     def setup_publish(self, topic, serializer, qos, default=None):
         """ Prepare publishing to a topic.
@@ -202,19 +204,14 @@ class Manager:
         if "#" in topic or "+" in topic:
             raise ValueError("Please do not use # or + in topic")
 
-        if default is not None and serializer is not None:
-            default = serializer.pack(default)
+        default = serializer.pack(default) if default is not None else None
         config = {"topic": topic, "serializer": serializer, "qos": qos,
                   "default": default}
 
-        if topic in self._publications:
-            # Topic already used, compare configuration.
-            if config != self._publications[topic]:
-                raise ValueError("Topic is already configured "
-                                 "with other settings")
-        else:
-            # Topic new, create config
-            self._publications[topic] = config
+        if self._publications.get(topic, config) != config:
+            raise ValueError("Topic is already configured with other settings")
+
+        self._publications[topic] = config
 
     def publish(self, topic, payload, retain):
         """ Publish a value to a topic.
@@ -229,8 +226,6 @@ class Manager:
         :rtype: object
         :raises Exception: If paho fails.
         """
-
-
 
         config = self._publications[topic]
         if not self.connected:

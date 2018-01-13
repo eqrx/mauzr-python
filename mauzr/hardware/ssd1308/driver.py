@@ -1,12 +1,9 @@
-"""
-.. module:: driver
-   :platform: all
-   :synopsis: Driver for SSD1308 devices.
-
-.. moduleauthor:: Alexander Sowitzki <dev@eqrx.net>
-"""
+""" Driver for SSD1308 devices. """
 
 import mauzr.hardware.driver
+
+__author__ = "Alexander Sowitzki"
+
 
 class Driver(mauzr.hardware.driver.Driver):
     """ Driver for SSD1308 devices.
@@ -77,30 +74,18 @@ class Driver(mauzr.hardware.driver.Driver):
 
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _init(self):
-        cmds = (Driver.SET_DISP | 0x00, # off
-                # address setting
-                Driver.SET_MEM_ADDR, 0x00, # horizontal
-                # resolution and layout
-                Driver.SET_DISP_START_LINE | 0x00,
-                Driver.SET_SEG_REMAP | 0x01, # column addr 127 mapped to SEG0
+        cmds = (Driver.SET_DISP | 0x00, Driver.SET_MEM_ADDR, 0x00,
+                Driver.SET_DISP_START_LINE | 0x00, Driver.SET_SEG_REMAP | 0x01,
                 Driver.SET_MUX_RATIO, self._dimensions[1] - 1,
-                Driver.SET_COM_OUT_DIR | 0x08, # scan from COM[N] to COM0
-                Driver.SET_DISP_OFFSET, 0x00,
+                Driver.SET_COM_OUT_DIR | 0x08, Driver.SET_DISP_OFFSET, 0x00,
                 Driver.SET_COM_PIN_CFG, (0x02 if self._dimensions[1] == 32
                                          else 0x12),
-                # timing and driving scheme
                 Driver.SET_DISP_CLK_DIV, 0x80,
                 Driver.SET_PRECHARGE, 0x22 if self._external_vcc else 0xf1,
-                Driver.SET_VCOM_DESEL, 0x30, # 0.83*Vcc
-                # display
-                Driver.SET_CONTRAST, 0xff, # maximum
-                Driver.SET_ENTIRE_ON, # output follows RAM contents
-                Driver.SET_NORM_INV, # not inverted
-                # charge pump
+                Driver.SET_VCOM_DESEL, 0x30, Driver.SET_CONTRAST, 0xff,
+                Driver.SET_ENTIRE_ON, Driver.SET_NORM_INV,
                 Driver.SET_CHARGE_PUMP, 0x10 if self._external_vcc else 0x14,
-                Driver.SET_DISP | 0x01
-                # on
-               )
+                Driver.SET_DISP | 0x01)
         [self._write_cmd(cmd) for cmd in cmds]
         mauzr.hardware.driver.Driver._init(self)
 

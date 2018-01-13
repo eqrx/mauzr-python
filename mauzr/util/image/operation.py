@@ -1,6 +1,7 @@
 """ Common image operations. """
 
-import cv2 # pylint: disable=import-error
+import cv2  # pylint: disable=import-error
+
 
 def rotate(**kwargs):
     """ Rotate an image. """
@@ -12,6 +13,7 @@ def rotate(**kwargs):
     if flip is not None:
         return lambda i: cv2.rotate(i, flip)
 
+
 def resize(**kwargs):
     """ Resize an image. """
 
@@ -19,12 +21,14 @@ def resize(**kwargs):
     if resolution:
         return lambda i: cv2.resize(i, resolution)
 
+
 def encode(**kwargs):
     """ Encode an image. """
 
     encoding = kwargs.get("encode", None)
     if encoding:
         return lambda i: cv2.imencode('.jpg', i)[1]
+
 
 def stamp(**kwargs):
     """ Add timestamp to image. """
@@ -34,6 +38,7 @@ def stamp(**kwargs):
         return lambda i: cv2.putText(i, str(datetime.datetime.now()), (10, 30),
                                      cv2.FONT_HERSHEY_SIMPLEX, 1,
                                      (255, 0, 0), 3, cv2.LINE_AA)
+
 
 def load_all(**kwargs):
     """ Try to load all operations. """

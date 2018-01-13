@@ -165,6 +165,11 @@ class CoreMockup(mauzr.platform.cpython.Core):
 
         self.mqtt = MQTTMockup(self)
 
+    def _setup_config(self, suit, agent, instance, parser):
+        from mauzr.platform.cpython.config import Config
+        self.config = Config(suit, agent, instance, parser)
+        self.config.read_config()
+
 
 @pytest.fixture(scope="function")
 def core():

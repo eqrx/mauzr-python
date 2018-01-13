@@ -8,19 +8,24 @@ import datetime
 import platform
 import setuptools
 
+__author__ = "Alexander Sowitzki"
+
+
 class DockerCommand(setuptools.Command):
     """ Setuptools command for docker. """
     # pylint: disable=attribute-defined-outside-init
 
     description = "Build and push image"
     """ Command description. """
-    user_options = [("slug", None, "Slug of the image")]
+    user_options = [("slug", None, "Slug of the image"),
+                    ("nopull", "np", "Not pull build images")]
     """ Available options. """
 
     def initialize_options(self):
         """ Set default values for options. """
 
         self.slug = None
+        self.nopull = False
 
     def finalize_options(self):
         """ Collect parameters. """
@@ -47,7 +52,8 @@ class DockerCommand(setuptools.Command):
             tags = [f"{self.slug}:{variant}-{arch}{suffix}" for suffix in
                     (f"-{commit}", branch_suffix)]
             subprocess.check_call(["docker", "build", "-t", tags[0],
-                                   "-f", f".docker/{variant}", "--pull",
+                                   "-f", f".docker/{variant}",
+                                   "" if self.nopull else "--pull",
                                    "--build-arg", f"VERSION={branch}",
                                    "--build-arg", f"VCS_REF={commit}",
                                    "--build-arg", f"BUILD_DATE={timestamp}",
@@ -58,11 +64,13 @@ class DockerCommand(setuptools.Command):
                 subprocess.check_call(("docker", "push", tag))
 
             for tag in tags:
-                cmd = ("manifest-tool", "push", "from-args", "--ignore-missing",
-                       "--platforms", "linux/amd64,linux/arm", "--template",
+                cmd = ("manifest-tool", "push", "from-args",
+                       "--ignore-missing", "--platforms",
+                       "linux/amd64,linux/arm", "--template",
                        tag.replace(f"-{arch}", "-ARCH"), "--target",
                        tag.replace(f"-{arch}", ""))
                 subprocess.check_call(cmd)
+
 
 class ESPBuildCommand(setuptools.Command):
     """ Setuptools command to build esp binaries. """
@@ -70,17 +78,18 @@ class ESPBuildCommand(setuptools.Command):
 
     description = "ESP maangement"
     """ Command description. """
-    user_options = []
+    user_options = [("nopull", "np", "Not pull build images")]
     """ Available options. """
 
     def initialize_options(self):
         """ Implements required method. """
 
+        self.nopull = False
+
     def finalize_options(self):
         """ Implements required method. """
 
-    @staticmethod
-    def run():
+    def run(self):
         """ Print python version of build. """
         image = "eqrx/mauzr-build:esp"
         root = Path(".").resolve()
@@ -92,8 +101,10 @@ class ESPBuildCommand(setuptools.Command):
 
         (root/"build"/"esp"/"32").mkdir(parents=True, exist_ok=True)
         (root/"build"/"esp"/"8266").mkdir(parents=True, exist_ok=True)
-        subprocess.check_call(("docker", "pull", image))
+        if not self.nopull:
+            subprocess.check_call(("docker", "pull", image))
         subprocess.check_call(run_cmd)
+
 
 class ESPFlashCommand(setuptools.Command):
     """ Setuptools command for esp. """
@@ -103,7 +114,8 @@ class ESPFlashCommand(setuptools.Command):
     """ Command description. """
     user_options = [("erase", "e", "Board is new (erase flash)"),
                     ("board=", "b", "Board"),
-                    ("port=", "p", "Port to use for upload")]
+                    ("port=", "p", "Port to use for upload"),
+                    ("nopull", "np", "Not pull build images")]
     """ Available options. """
 
     def initialize_options(self):
@@ -133,7 +145,7 @@ class ESPFlashCommand(setuptools.Command):
         else:
             raise ValueError("Invalid board")
 
-        cmd += "erase " if self.erase  and self.port else ""
+        cmd += "erase " if self.erase and self.port else ""
         cmd += "deploy " if self.port else ""
         cmd += f" && chown {os.geteuid()} -R /opt/mauzr/build"
 
@@ -142,9 +154,9 @@ class ESPFlashCommand(setuptools.Command):
         run_cmd = ("docker", "run", "--privileged", "-v", f"{root}:/opt/mauzr",
                    image, "sh", "-c", cmd)
 
-
         subprocess.check_call(("docker", "pull", image))
         subprocess.check_call(run_cmd)
+
 
 class ESPDeployCommand(setuptools.Command):
     """ Setuptools command for upy deployment. """
@@ -177,7 +189,6 @@ class ESPDeployCommand(setuptools.Command):
         if self.module is None:
             raise ValueError("Module must be set")
         self.module = Path(self.module)
-
 
     def run(self):
         """ Execute command. """

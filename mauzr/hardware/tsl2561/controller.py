@@ -1,10 +1,12 @@
 """ Controller for tsl2561 devices. """
-__author__ = "Alexander Sowitzki"
 
 import mauzr
-from mauzr.serializer import Struct
+from mauzr.serializer import Struct as SS
 
-def controller(core, cfgbase="tsl2561", **kwargs):
+__author__ = "Alexander Sowitzki"
+
+
+def control(core, cfgbase="tsl2561", **kwargs):
     """ Controller for tsl2561 devices.
 
     :param core: Core instance.
@@ -21,8 +23,8 @@ def controller(core, cfgbase="tsl2561", **kwargs):
     mqtt = core.mqtt
     base = cfg["base"]
     log = core.logger("<TSL2561@{}>".format(base))
-    mqtt.setup_publish(base + "illuminance", Struct("!f"), 0)
-    mqtt.setup_publish(base + "poll_interval", Struct("!I"), 0, cfg["interval"])
+    mqtt.setup_publish(base + "illuminance", SS("!f"), 0)
+    mqtt.setup_publish(base + "poll_interval", SS("!I"), 0, cfg["interval"])
 
     def _on_measurement(_topic, channels):
         if True in [ch > 65000 for ch in channels]:
@@ -54,18 +56,10 @@ def controller(core, cfgbase="tsl2561", **kwargs):
         channels = [ch * fi for ch, fi in zip(channels, f)]
         illuminance = (max(0, channels[0] - channels[1]) + 8192) >> 14
         mqtt.publish(base + "illuminance", illuminance, True)
-    mqtt.subscribe(base + "channels", _on_measurement, Struct("<HH"), 0)
+    mqtt.subscribe(base + "channels", _on_measurement, SS("<HH"), 0)
+
 
 def main():
-    """ Main method for the Controller. """
-    # Setup core
-    core = mauzr.linux("mauzr", "tsl2561controller")
-    # Setup MQTT
-    core.setup_mqtt()
-    # Spin up controller
-    controller(core)
-    # Run core
-    core.run()
+    """ Entry point. """
 
-if __name__ == "__main__":
-    main()
+    mauzr.cpython("mauzr", "tsl2561controller", control)

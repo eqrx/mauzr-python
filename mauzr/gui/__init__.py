@@ -1,8 +1,10 @@
 """ Montoring and control GUI. """
-__author__ = "Alexander Sowitzki"
 
 import enum
-import pygame # pylint: disable=import-error
+import pygame  # pylint: disable=import-error
+
+__author__ = "Alexander Sowitzki"
+
 
 class BaseElement:
     """ An visible element inside a GUI.
@@ -23,7 +25,6 @@ class BaseElement:
 
     def _on_click(self):
         """ Called when the element is clicked. """
-
 
     def on_mouse(self, position):
         """ Called on mouse click.
@@ -66,6 +67,7 @@ class BaseElement:
         self._draw_foreground()
         self._draw_text()
 
+
 class RectBackgroundMixin:
     """ An rectangle element inside a GUI. """
 
@@ -88,6 +90,7 @@ class ColorState(enum.Enum):
     """ State is undesired. """
     INFORMATION = ((0, 150, 0), (0, 255, 0))
     """ State is good. """
+
 
 class ColorStateMixin:
     """ Mixin for :class:`mauzr.gui.Element`, adding a color change based
@@ -127,6 +130,7 @@ class ColorStateMixin:
             t = pygame.time.get_ticks()
             i = t // self.COLOR_DISPLAY_DURATION % len(self._state.value)
         return self._state.value[i]
+
 
 class TextMixin:
     """ Mixin for :class:`mauzr.gui.Element`, adding a text label.

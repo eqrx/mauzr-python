@@ -1,9 +1,11 @@
 """ Types for SPI communication. """
-__author__ = "Alexander Sowitzki"
 
 import ctypes
 
+__author__ = "Alexander Sowitzki"
+
 SPI_IOC_MESSAGE = 0x40206b00
+
 
 class IoctlData(ctypes.Structure):
     """ ioctl message for spi transfer. See linux spi doc. """

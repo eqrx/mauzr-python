@@ -1,11 +1,13 @@
 """ GUI elements. """
-__author__ = "Alexander Sowitzki"
 
 import math
-import pygame # pylint: disable=import-error
+import pygame  # pylint: disable=import-error
 from mauzr.serializer import Bool as BS
 from mauzr.gui import TextMixin, ColorStateMixin, RectBackgroundMixin
 from mauzr.gui import BaseElement, ColorState
+
+__author__ = "Alexander Sowitzki"
+
 
 class AgentIndicator(ColorStateMixin, TextMixin, RectBackgroundMixin,
                      BaseElement):
@@ -66,10 +68,10 @@ class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
                 be in curly braces and with implicit position reference. \
                 Will be concatenated to the internal format.
     :type fmt: str
-    :param state_conditions: Dictionary mapping :class:`mauzr.gui.ColorState` \
-                             to functions. The function receives one parameter \
-                             and should return True if the value indicates \
-                             the mapped state.
+    :param state_conditions: Dictionary mapping :class:`mauzr.gui.ColorState`\
+                             to functions. The function receives one
+                             parameter and should return True if the value \
+                             indicates the mapped state.
     :type state_conditions: dict
     :param timeout: If not None, an update of the topic is expected each \
                     ``timeout`` milliseconds. If a timeout occurs, \
@@ -116,6 +118,7 @@ class Indicator(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
     def _on_click(self):
         # Assume click means acknowledge
         self.state_acknowledged = True
+
 
 class SimpleController(TextMixin, RectBackgroundMixin, BaseElement):
     """ Controller for sending a value when clicked.
@@ -174,6 +177,7 @@ class SimpleController(TextMixin, RectBackgroundMixin, BaseElement):
             return self.COLOR_READY
         return self.COLOR_NOT_READY
 
+
 class ToggleController(TextMixin, RectBackgroundMixin, BaseElement):
     """ Controller for toggling a values between two states.
 
@@ -229,6 +233,7 @@ class ToggleController(TextMixin, RectBackgroundMixin, BaseElement):
             return self.COLOR_ON
         return self.COLOR_OFF
 
+
 class FeedDisplayer(BaseElement):
     """ Display an image feed.
 
@@ -253,7 +258,8 @@ class FeedDisplayer(BaseElement):
         self._image_rect = None
 
     def _on_image(self, _topic, surface):
-        self._image_surface = pygame.transform.scale(surface, self._size.values)
+        self._image_surface = pygame.transform.scale(surface,
+                                                     self._size.values)
         self._image_rect = self._image_surface.get_rect()
 
     def _draw_foreground(self):
@@ -261,6 +267,7 @@ class FeedDisplayer(BaseElement):
 
         if self._image_surface:
             self._surface.blit(self._image_surface, self._image_rect)
+
 
 class Acceptor(TextMixin, RectBackgroundMixin, BaseElement):
     """ Acknowledge all states via one click.
@@ -289,6 +296,7 @@ class Acceptor(TextMixin, RectBackgroundMixin, BaseElement):
         """ Color of the element as tuple. """
 
         return ColorState.INFORMATION.value[0]
+
 
 class Muter(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
     """ Mute audio notifications.
@@ -324,6 +332,7 @@ class Muter(ColorStateMixin, TextMixin, RectBackgroundMixin, BaseElement):
         if self._muted:
             return ColorState.WARNING.value[0]
         return ColorState.INFORMATION.value[0]
+
 
 class Gauge(RectBackgroundMixin, BaseElement):
     """ Gauge element. """

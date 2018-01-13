@@ -1,4 +1,5 @@
 """ Controller basics. """
+
 __author__ = "Alexander Sowitzki"
 
 
@@ -41,6 +42,7 @@ class Publisher:
     def _reset(self):
         """ Reset the publisher. """
         pass
+
 
 class TimedPublisher(Publisher):
     """ Base for controllers with a fixed output rate.

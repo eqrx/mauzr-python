@@ -1,7 +1,9 @@
 """ Vector helper module. """
-__author__ = "Alexander Sowitzki"
 
 import math
+
+__author__ = "Alexander Sowitzki"
+
 
 class Vector:
     """ A vector of arbitrary length.
@@ -43,6 +45,7 @@ class Vector:
 
     def __reversed__(self):
         return Vector(*reversed(self.values))
+
 
 class Point:
     """ 3D Point.

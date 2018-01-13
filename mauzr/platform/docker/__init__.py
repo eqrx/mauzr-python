@@ -1,7 +1,9 @@
 """ Provide core for docker agents. """
-__author__ = "Alexander Sowitzki"
 
 import mauzr.platform.linux
+
+__author__ = "Alexander Sowitzki"
+
 
 class Core(mauzr.platform.linux.Core):
     """ Manage program components on docker agents.

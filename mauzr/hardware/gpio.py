@@ -1,7 +1,9 @@
 """  Helper for GPIO. """
-__author__ = "Alexander Sowitzki"
 
 import mauzr.serializer
+
+__author__ = "Alexander Sowitzki"
+
 
 def link_output(core, cfgbase="gpioout", **kwargs):
     """ Links a GPIO output to an MQTT topic.
@@ -38,6 +40,7 @@ def link_output(core, cfgbase="gpioout", **kwargs):
 
     core.mqtt.subscribe(cfg["topic"], _on_setting,
                         mauzr.serializer.Bool, cfg["qos"])
+
 
 def link_input(core, cfgbase="gpioin", **kwargs):
     """ Links a GPIO input to an MQTT topic.
@@ -94,6 +97,7 @@ def link_input(core, cfgbase="gpioin", **kwargs):
             task.enable()
 
     core.gpio.listeners.append(_on_setting)
+
 
 def link_output_set(core, cfgbase="gpioout", **kwargs):
     """ Links a GPIO input to an MQTT topic.

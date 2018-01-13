@@ -1,5 +1,9 @@
 """ Serializer for images. """
+
+import io
+
 __author__ = "Alexander Sowitzki"
+
 
 class OpenCV:
     """ Serialize images with openCV. """
@@ -24,11 +28,12 @@ class OpenCV:
         :rtype: PIL.Image
         """
 
-        import cv2 # pylint: disable=import-error
-        import numpy # pylint: disable=import-error
+        import cv2  # pylint: disable=import-error
+        import numpy  # pylint: disable=import-error
 
         data = numpy.fromstring(data, numpy.uint8)
         return cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
+
 
 class Pillow:
     """ Serialize images with pillow.
@@ -48,8 +53,6 @@ class Pillow:
         :rtype: bytes
         """
 
-        import io
-
         stream = io.BytesIO()
         image.save(stream, format=self._format)
         stream.seek(0)
@@ -64,11 +67,10 @@ class Pillow:
         :rtype: PIL.Image
         """
 
-        import io
-        import PIL.Image # pylint: disable=import-error
+        import PIL.Image  # pylint: disable=import-error
 
-        stream = io.BytesIO(data)
-        return PIL.Image.open(stream)
+        return PIL.Image.open(io.BytesIO(data))
+
 
 class Pygame:
     """ Serialize images for pygame. """
@@ -87,8 +89,6 @@ class Pygame:
         :rtype: pygame.Surface
         """
 
-        import io
-        import pygame # pylint: disable=import-error
+        import pygame  # pylint: disable=import-error
 
-        stream = io.BytesIO(data)
-        return pygame.image.load(stream)
+        return pygame.image.load(io.BytesIO(data))

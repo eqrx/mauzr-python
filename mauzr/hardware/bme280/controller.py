@@ -1,9 +1,11 @@
 """ Controller for BME280 devices. """
-__author__ = "Alexander Sowitzki"
 
 import struct
 import mauzr
 from mauzr.serializer import Struct
+
+__author__ = "Alexander Sowitzki"
+
 
 # pylint: disable=too-many-instance-attributes
 class Controller:
@@ -67,8 +69,8 @@ class Controller:
 
         # temperature
         var1 = ((temp >> 3) - (self._t1 << 1)) * (self._t2 >> 11)
-        var2 = (((((temp >> 4) - self._t1) * ((temp >> 4) - self._t1))
-                 >> 12) * self._t3) >> 14
+        var2 = (((((temp >> 4) - self._t1) * ((temp >> 4) - self._t1)) >>
+                 12) * self._t3) >> 14
         self._tfine = var1 + var2
         temp = (self._tfine * 5 + 128) >> 8
 
@@ -89,10 +91,10 @@ class Controller:
 
         # hum
         h = self._tfine - 76800
-        h = (((((hum << 14) - (self._h4 << 20) - (self._h5 * h)) + 16384)
-              >> 15) * (((((((h * self._h6) >> 10) *
-                            (((h * self._h3) >> 11) + 32768)) >> 10) +
-                          2097152) * self._h2 + 8192) >> 14))
+        h = (((((hum << 14) - (self._h4 << 20) - (self._h5 * h)) + 16384) >>
+              15) * (((((((h * self._h6) >> 10) * (((h * self._h3) >> 11) +
+                                                   32768)) >> 10) +
+                       2097152) * self._h2 + 8192) >> 14))
         h = h - (((((h >> 15) * (h >> 15)) >> 7) * self._h1) >> 4)
         h = 0 if h < 0 else h
         h = 419430400 if h > 419430400 else h
@@ -105,16 +107,8 @@ class Controller:
                 val += cor
             self._mqtt.publish(self._base + lbl, val, True)
 
-def main():
-    """ Main method for the Controller. """
-    # Setup core
-    core = mauzr.linux("mauzr", "bme280controller")
-    # Setup MQTT
-    core.setup_mqtt()
-    # Spin up controller
-    Controller(core)
-    # Run core
-    core.run()
 
-if __name__ == "__main__":
-    main()
+def main():
+    """ Entry point. """
+
+    mauzr.cpython("mauzr", "bme280controller", Controller)

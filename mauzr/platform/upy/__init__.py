@@ -1,11 +1,13 @@
 """ Provide core for upy devices. """
-__author__ = "Alexander Sowitzki"
 
 import logging
 import sys
-import gc # pylint: disable=import-error
-import machine # pylint: disable=import-error
-import utime # pylint: disable=import-error
+import gc  # pylint: disable=import-error
+import machine  # pylint: disable=import-error
+import utime  # pylint: disable=import-error
+
+__author__ = "Alexander Sowitzki"
+
 
 class Core:
     """ Manage program components on upy platforms."""
@@ -84,7 +86,8 @@ class Core:
 
     def _setup_wlan(self):
         """ Setup WLAN. """
-        from  mauzr.platform.upy.wlan import Manager
+
+        from mauzr.platform.upy.wlan import Manager
         self.wlan = Manager(self)
         self.clean()
 
@@ -145,7 +148,7 @@ class Core:
         except KeyboardInterrupt:
             pass
         except Exception as err:
-            sys.print_exception(err) # pylint: disable=no-member
+            sys.print_exception(err)  # pylint: disable=no-member
             if reset_on_exception:
                 machine.reset()
             raise

@@ -1,9 +1,10 @@
 """ Driver for tsl2561 devices. """
-__author__ = "Alexander Sowitzki"
-
 
 from mauzr.hardware.driver import DelayedPollingDriver
 import mauzr.serializer
+
+__author__ = "Alexander Sowitzki"
+
 
 class Driver(DelayedPollingDriver):
     """ Driver for tsl2561 devices.

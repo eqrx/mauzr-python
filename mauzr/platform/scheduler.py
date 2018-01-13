@@ -1,7 +1,9 @@
 """ Common parts for a task scheduler. """
-__author__ = "Alexander Sowitzki"
 
 import logging
+
+__author__ = "Alexander Sowitzki"
+
 
 class Task:
     """ Represents a single or recurring task that can be executed.
@@ -105,6 +107,7 @@ class Task:
         # Run task
         self._target()
 
+
 class Scheduler:
     """ Schedules tasks that are executed by a single runner. """
 
@@ -154,7 +157,7 @@ class Scheduler:
         pending_tasks = [task for task in active_tasks if task.pending]
 
         if pending_tasks:
-            # There are pending tasks, execute them all an bail
+            # There are pending tasks, execute them all and bail
             for task in pending_tasks:
                 task.execute()
         elif active_tasks:

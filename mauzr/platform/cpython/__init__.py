@@ -1,10 +1,12 @@
 """ Bootstrap the mauzr agent on cpython systems. """
-__author__ = "Alexander Sowitzki"
 
 import contextlib
 import threading
 import logging
 import _thread
+
+__author__ = "Alexander Sowitzki"
+
 
 class Core:
     """ Manage program components on cpython platforms.
@@ -31,10 +33,14 @@ class Core:
         self.scheduler = None
         self.mqtt = None
         self.telegram = None
+        self.config = None
 
         self._setup_config(suit, agent, instance, parser)
         self._setup_logging()
         self._setup_scheduler()
+
+        if "mqtt" in self.config:
+            self._setup_mqtt()
 
     @staticmethod
     def on_failure():
@@ -53,8 +59,8 @@ class Core:
     def _setup_logging(self):
         """ Setup logging. """
 
-        level = logging.getLevelName(self.config["log_level"].upper())
-        logging.basicConfig(level=level,
+        level = self.config.get("log_level", "info").upper()
+        logging.basicConfig(level=logging.getLevelName(level),
                             format="{levelname} {asctime} {name}: {message}",
                             style="{")
 
@@ -131,7 +137,7 @@ class Core:
 
         return self._stack.close()
 
-    def setup_mqtt(self, cfgbase="mqtt", **kwargs):
+    def _setup_mqtt(self, cfgbase="mqtt", **kwargs):
         """ Setup the MQTT manager and client.
 
         See :class:`mauzr.platform.mqtt.Manager` and

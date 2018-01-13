@@ -1,5 +1,4 @@
 """ Provide I2C functionality for linux. """
-__author__ = "Alexander Sowitzki"
 
 import fcntl
 import io
@@ -7,8 +6,10 @@ import os
 import threading
 import struct
 from ctypes import create_string_buffer
-
 from . import _types
+
+__author__ = "Alexander Sowitzki"
+
 
 class Device:
     """ Manage an I2C bus.
@@ -67,7 +68,6 @@ class Device:
                 buf = buf[0]
 
         return buf
-
 
     def read_register(self, register, amount=None, fmt=None):
         """ Read data from an register of a device.
@@ -238,7 +238,6 @@ class Bus:
 
         return buf
 
-
     def read_register(self, address, register, amount=None, fmt=None):
         """ Read data from an register of a device.
 
@@ -331,6 +330,7 @@ class Bus:
 
         self.fd.close()
 
+
 class MultiplexerBus(Bus):
     """ Manage an I2C with an TCA9548A attached.
 
@@ -367,6 +367,7 @@ class MultiplexerBus(Bus):
             fcntl.ioctl(self.fd, _types.I2C_SLAVE, device_address)
             self.current_address = address
 
+
 class MultiMultiplexerBus(Bus):
     """ Manage an I2C with multiple TCA9548A attached.
 
@@ -393,7 +394,7 @@ class MultiMultiplexerBus(Bus):
 
         if len(address) != 3:
             raise ValueError("Address must have multiplexer id,"
-                             + " subbus id and device id")
+                             " subbus id and device id")
         if self.current_address != address:
             multiplexer_address, bus_id, device_address = address
             fcntl.ioctl(self.fd, _types.I2C_SLAVE, multiplexer_address)

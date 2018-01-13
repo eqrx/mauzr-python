@@ -1,10 +1,12 @@
 """ Data conversion helpers. """
-__author__ = "Alexander Sowitzki"
 
 import enum
 import mauzr.serializer
 from mauzr.serializer import Bool as BS
 from mauzr.serializer import String as SS
+
+__author__ = "Alexander Sowitzki"
+
 
 class BoolCondition(enum.Enum):
     """ Condition for boolean channels. """
@@ -18,6 +20,7 @@ class BoolCondition(enum.Enum):
 
 BC = BoolCondition
 BCS = mauzr.serializer.Enum(BC, "!H")
+
 
 def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
     """ Aggregates multiple topics to a single one.
@@ -67,9 +70,10 @@ def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
         values[in_topic] = None
         core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
 
+
 def delay(core, condition, amount, payload, retain,
           in_topic, out_topic, deserializer, serializer, qos):
-    """ Allows to send a payload when a condition is met after a defined delay.
+    """ Allows to send payload when a condition is met after a defined delay.
 
     :param core: Core instance.
     :type core: object
@@ -113,6 +117,7 @@ def delay(core, condition, amount, payload, retain,
     core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
     task = core.scheduler(_after_delay, amount, single=True)
 
+
 def split(core, in_topic, out_topics, deserializer, serializer, default, qos):
     """ Split a single topic into multiple.
 
@@ -146,6 +151,7 @@ def split(core, in_topic, out_topics, deserializer, serializer, default, qos):
          for topic, value in zip(out_topics, values)]
 
     core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
+
 
 def merge(core, in_topics, out_topic, deserializer, serializer, default, qos):
     """ Merge multiple topics into one.
@@ -186,6 +192,7 @@ def merge(core, in_topics, out_topic, deserializer, serializer, default, qos):
 
     [core.mqtt.subscribe(topic, _on_message, deserializer, qos)
      for topic in in_topics]
+
 
 # pylint: disable=redefined-builtin
 def convert(core, mapper, retain, default,
@@ -233,6 +240,7 @@ def convert(core, mapper, retain, default,
 
     core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
 
+
 def gate_bool(core, topic):
     """ Control a bool topic by applying a condition for it
 
@@ -248,10 +256,11 @@ def gate_bool(core, topic):
     **Input Topics:**
 
         - ``topic``/*condition* (``!H``) - :class:`BoolCondition` describing \
-                                         what the output may do.
-        - ``topic``/*request* (``?``) - Bool requesting the output to be enabled
-                                      or disabled.
-        - ``topic``/*request/toggle* (``?``) - Request the output to be toggled.
+                                           what the output may do.
+        - ``topic``/*request* (``?``) - Bool requesting the output to be \
+                                        enabled or disabled.
+        - ``topic``/*request/toggle* (``?``) - Request the output to \
+                                               be toggled.
 
     **Output Topics:**
 
@@ -284,13 +293,13 @@ def gate_bool(core, topic):
               lambda st, tpc, val: st[con_tpc] == BC.FREE and not st[topic],
               True, on_allowed, BS, 0)
 
-
     aggregate(core, ((con_tpc, BCS), (topic, BS)),
               lambda st, tpc, val: st[con_tpc] == BC.FREE and st[topic],
               False, off_allowed, BS, 0)
 
-    aggregate(core, ((topic, BS), (con_tpc, BCS), (req_tpc, BS), (tgl_tpc, BS)),
-              _handler, False, topic, BS, 0)
+    aggregate(core, ((topic, BS), (con_tpc, BCS), (req_tpc, BS),
+                     (tgl_tpc, BS)), _handler, False, topic, BS, 0)
+
 
 def to_string(core, topic, ser, converter=str):
     """ Convert messages from a topic into another topic as string.
@@ -307,6 +316,7 @@ def to_string(core, topic, ser, converter=str):
     """
 
     convert(core, converter, True, None, topic, topic + "/str", ser, SS, 0)
+
 
 def from_string(core, topic, retain, ser, converter):
     """ Convert string messages from a topic into another topic and type.

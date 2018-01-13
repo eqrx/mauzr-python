@@ -1,8 +1,10 @@
 """ Provide systemd functions """
-__author__ = "Alexander Sowitzki"
 
 import socket
 import os
+
+__author__ = "Alexander Sowitzki"
+
 
 class Systemd:
     """ Systemd integration for agents.

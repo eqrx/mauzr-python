@@ -1,7 +1,9 @@
 """ Base for drivers. """
-__author__ = "Alexander Sowitzki"
 
 from mauzr.serializer import Struct
+
+__author__ = "Alexander Sowitzki"
+
 
 def guard(exceptions, suppress=False, ignore_ready=False):
     """ Create decorator to handle raised exceptions for drivers.
@@ -47,10 +49,12 @@ def guard(exceptions, suppress=False, ignore_ready=False):
         return wrapper
     return guard_decorator
 
+
 class DriverError(Exception):
     """ Exception representing an recoverable driver error. """
 
     pass
+
 
 class Driver:
     """ Base for drivers.
@@ -117,6 +121,7 @@ class Driver:
         self._set_ready(False)
         self._log.info("Reset done")
 
+
 class PollingDriver(Driver):
     """ Base for drivers that poll values regularly.
 
@@ -165,6 +170,7 @@ class PollingDriver(Driver):
             self.poll_task.enable(after=self._poll_interval, instant=True)
         else:
             self.poll_task.disable()
+
 
 class DelayedPollingDriver(PollingDriver):
     """ Base for divers that poll values regularly and need a delay

@@ -1,9 +1,11 @@
 """ Provide MQTT support. """
+
+import gc  # pylint: disable=import-error
+from umqtt.simple import MQTTClient  # pylint: disable=import-error
+from umqtt.simple import MQTTException  # pylint: disable=import-error
+
 __author__ = "Alexander Sowitzki"
 
-import gc # pylint: disable=import-error
-from umqtt.simple import MQTTClient # pylint: disable=import-error
-from umqtt.simple import MQTTException # pylint: disable=import-error
 
 # pylint: disable=too-many-instance-attributes,no-member
 class Client:

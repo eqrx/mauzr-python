@@ -4,6 +4,7 @@ import mauzr
 import mauzr.util.image.operation
 from mauzr.util.image.serializer import OpenCV as ImageSerializer
 
+
 class Processor:
     """ Process images. """
 
@@ -37,13 +38,8 @@ class Processor:
         self._last_image = image
         self._mqtt.publish(self._cfg["out"], image, True)
 
+
 def main():
-    """ Entry point for the image processor. """
+    """ Entry point. """
 
-    core = mauzr.cpython("mauzr", "imageprocessor")
-    core.setup_mqtt()
-    Processor(core)
-    core.run()
-
-if __name__ == "__main__":
-    main()
+    mauzr.cpython("mauzr", "imageprocessor", Processor)

@@ -1,8 +1,10 @@
 """ WLAN for upy systems. """
-__author__ = "Alexander Sowitzki"
 
 import logging
-import network # pylint: disable=import-error
+import network  # pylint: disable=import-error
+
+__author__ = "Alexander Sowitzki"
+
 
 class Manager:
     """ Manage WLAN connections.
@@ -19,6 +21,7 @@ class Manager:
         - **networks** (:class:`dict`: A list of dictionaries containing \
             ssid, password and connection timeout in milliseconds.
     """
+
     def __init__(self, core, cfgbase="wlan", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
@@ -30,7 +33,6 @@ class Manager:
                                           single=True)
         self._networks = cfg["networks"]
         self._current_config = 0
-
 
         network.WLAN(network.AP_IF).active(False)
         self._wlan = network.WLAN(network.STA_IF)

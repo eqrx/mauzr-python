@@ -1,10 +1,10 @@
-#!/usr/bin/python3
 """ Camera functions. """
+
+import cv2  # pylint: disable=import-error
+import mauzr
 
 __author__ = "Alexander Sowitzki"
 
-import cv2 # pylint: disable=import-error
-import mauzr
 
 class Driver:
     """ Capture camera frames and publish them to the network.
@@ -63,11 +63,11 @@ class Driver:
             self._image = image.tostring()
             self._mqtt.publish(self._cfg["topic"], self._image, False)
 
+
 def main():
-    """ Entry point for camera feeder. """
+    """ Entry point. """
 
     core = mauzr.cpython("mauzr", "camera")
-    core.setup_mqtt()
     driver = Driver(core)
 
     with core:

@@ -1,16 +1,12 @@
-#!/usr/bin/python3
-"""
-.. module:: converter
-   :platform: all
-   :synopsis: Converter for SSD1308 devices.
-
-.. moduleauthor:: Alexander Sowitzki <dev@eqrx.net>
-"""
+""" Converter for SSD1308 devices. """
 
 import mauzr
 from mauzr.util.image.serializer import Pillow as ImageSerializer
 
-def converter(core, cfgbase="ssd1308", **kwargs):
+__author__ = "Alexander Sowitzki"
+
+
+def convert(core, cfgbase="ssd1308", **kwargs):
     """ Convert images of a topic to command bytes for SSD1308 display.
 
     :param core: Core instance.
@@ -68,16 +64,8 @@ def converter(core, cfgbase="ssd1308", **kwargs):
         mqtt.publish(cfg["out"], bytes(buf), True)
     mqtt.subscribe(cfg["in"], _on_input, ImageSerializer("bmp"), 0)
 
-def main():
-    """ Main method for the converter. """
-    # Setup core
-    core = mauzr.cpython("mauzr", "ssd1308converter")
-    # Setup MQTT
-    core.setup_mqtt()
-    # Spin up converter
-    converter(core)
-    # Run core
-    core.run()
 
-if __name__ == "__main__":
-    main()
+def main():
+    """ Entry point. """
+
+    mauzr.cpython("mauzr", "ssd1308converter", convert)

@@ -1,9 +1,11 @@
 """ Simple audio driver for linux. """
-__author__ = "Alexander Sowitzki"
 
 import subprocess
 import mauzr
-import mauzr.serializer
+from mauzr.serializer import String as SS
+
+__author__ = "Alexander Sowitzki"
+
 
 class Driver:
     """ Simple audio driver for linux.
@@ -36,10 +38,8 @@ class Driver:
         # Current process
         self._process = None
 
-        core.mqtt.subscribe(cfg["base"] + "/say", self._on_say,
-                            mauzr.serializer.String, 0)
-        core.mqtt.subscribe(cfg["base"] + "/play", self._on_play,
-                            mauzr.serializer.String, 0)
+        core.mqtt.subscribe(cfg["base"] + "/say", self._on_say, SS, 0)
+        core.mqtt.subscribe(cfg["base"] + "/play", self._on_play, SS, 0)
 
     def _process_done(self):
         # Return True when playback is done
@@ -69,13 +69,8 @@ class Driver:
         if self._process_done():
             self._process = subprocess.Popen(("aplay", path))
 
+
 def main():
-    """ Entry point for audio driver. """
+    """ Entry point. """
 
-    core = mauzr.linux("mauzr", "audio")
-    core.setup_mqtt()
-    Driver(core)
-    core.run()
-
-if __name__ == "__main__":
-    main()
+    mauzr.linux("mauzr", "audio", Driver)

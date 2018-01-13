@@ -1,8 +1,8 @@
 mauzr
 =====
 
-![](https://img.shields.io/travis/eqrx/mauzr.svg?maxAge=2592000)
-![](https://img.shields.io/github/tag/eqrx/mauzr.svg?maxAge=2592000)
+![](https://img.shields.io/travis/eqrx/mauzr.svg)
+![](https://img.shields.io/codeclimate/maintainability/eqrx/mauzr.svg)
 
 Mauzr is a hardware focussed multi-agent framework written in Python and C.
 It is intended to aid in the implementation of IoT applications, smart environments

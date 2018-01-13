@@ -1,9 +1,11 @@
 """ Sigfox access for upy. """
-__author__ = "Alexander Sowitzki"
 
 import logging
-import usocket # pylint: disable=import-error
-import network # pylint: disable=import-error
+import usocket  # pylint: disable=import-error
+import network  # pylint: disable=import-error
+
+__author__ = "Alexander Sowitzki"
+
 
 class Manager:
     """ Manage the Sigfox module on upy platforms. """

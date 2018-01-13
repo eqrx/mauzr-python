@@ -1,8 +1,10 @@
 """ Connect with MQTT brokers. """
-__author__ = "Alexander Sowitzki"
 
 import ssl
 import paho.mqtt.client
+
+__author__ = "Alexander Sowitzki"
+
 
 class Client:
     """ Use the Paho MQTT implementation to provide MQTT support.

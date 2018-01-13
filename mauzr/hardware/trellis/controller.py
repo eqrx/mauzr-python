@@ -1,8 +1,10 @@
 """ Controller for Trellis devices. """
-__author__ = "Alexander Sowitzki"
 
 import mauzr
 from mauzr.serializer import Bool
+
+__author__ = "Alexander Sowitzki"
+
 
 class Controller:
     """ Driver for trellis devices.
@@ -21,10 +23,10 @@ class Controller:
     **Configuration:**
 
         - **base** (:class:`str`) - Topic base.
-        - **button_topics** (:class:`tuple`)  - List of topics to map button \
-                                                presses to.
-        - **led_topics** (:class:`tuple`)  - List of topics to receive led \
-                                             settings by.
+        - **button_topics** (:class:`tuple`) - List of topics to map button \
+                                               presses to.
+        - **led_topics** (:class:`tuple`) - List of topics to receive led \
+                                            settings by.
 
     **Input topics:**
 
@@ -69,7 +71,8 @@ class Controller:
 
         self._mqtt.setup_publish(cfg["base"] + "leds", None, 0,
                                  default=self._led_bytes())
-        self._mqtt.subscribe(cfg["base"] + "buttons", self._on_buttons, None, 0)
+        self._mqtt.subscribe(cfg["base"] + "buttons", self._on_buttons,
+                             None, 0)
         [self._mqtt.subscribe(topic, self._on_led, Bool, 0)
          for topic in self._led_topics if topic is not None]
         [self._mqtt.setup_publish(topic, Bool, 0)
@@ -115,16 +118,8 @@ class Controller:
             data.append(entry >> 8)
         return bytes(data)
 
-def main():
-    """ Main method for the controller. """
-    # Setup core
-    core = mauzr.cpython("mauzr", "trelliscontroller")
-    # Setup MQTT
-    core.setup_mqtt()
-    # Spin up converter
-    Controller(core)
-    # Run core
-    core.run()
 
-if __name__ == "__main__":
-    main()
+def main():
+    """ Entry point. """
+
+    mauzr.cpython("mauzr", "trelliscontroller", Controller)

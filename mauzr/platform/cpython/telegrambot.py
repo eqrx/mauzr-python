@@ -1,7 +1,9 @@
 """  Connect as a bot to telegram. """
+
+import telegram.ext  # pylint: disable=import-error
+
 __author__ = "Alexander Sowitzki"
 
-import telegram.ext # pylint: disable=import-error
 
 class Bot:
     """A telegram bot.

@@ -1,7 +1,9 @@
 """ Configuration helper. """
-__author__ = "Alexander Sowitzki"
 
 import logging
+
+__author__ = "Alexander Sowitzki"
+
 
 class Config:
     """ Load and parse configuration for posix agents.

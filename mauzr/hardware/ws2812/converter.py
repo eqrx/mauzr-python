@@ -1,9 +1,11 @@
 """ Converter for WS2812 leds. """
 
-import numpy # pylint: disable=import-error
-
+import numpy  # pylint: disable=import-error
 import mauzr
 from mauzr.serializer import Struct
+
+__author__ = "Alexander Sowitzki"
+
 
 def convert(core, cfgbase="ws2812", **kwargs):
     """ Converter for WS2812 leds.
@@ -51,16 +53,8 @@ def convert(core, cfgbase="ws2812", **kwargs):
         serializer = Struct("!" + "f" * slicecfg["length"] * 3)
         core.mqtt.subscribe(slicecfg["topic"], _on_message, serializer, 0)
 
-def main():
-    """ Main method for the Converter. """
-    # Setup core
-    core = mauzr.linux("mauzr", "ws2812converter")
-    # Setup MQTT
-    core.setup_mqtt()
-    # Spin up converter
-    convert(core)
-    # Run core
-    core.run()
 
-if __name__ == "__main__":
-    main()
+def main():
+    """ Entry point. """
+
+    mauzr.cpython("mauzr", "ws2812converter", convert)

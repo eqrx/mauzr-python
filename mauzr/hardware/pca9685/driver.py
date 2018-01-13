@@ -1,11 +1,12 @@
 """ PCA9685 driver. """
 
-__author__ = "Alexander Sowitzki"
-
 import time
 import mauzr
 import mauzr.hardware.driver
 from mauzr.serializer import Struct
+
+__author__ = "Alexander Sowitzki"
+
 
 class Driver(mauzr.hardware.driver.Driver):
     """ Driver for PCA9685 PWM devices.

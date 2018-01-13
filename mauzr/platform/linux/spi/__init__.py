@@ -1,11 +1,12 @@
 """ Provide I2C functionality for linux. """
-__author__ = "Alexander Sowitzki"
 
 import fcntl
 import io
 from ctypes import create_string_buffer
-
 from . import _types
+
+__author__ = "Alexander Sowitzki"
+
 
 class Device:
     """ Manage an I2C bus.

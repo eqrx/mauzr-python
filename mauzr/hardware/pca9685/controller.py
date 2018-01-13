@@ -1,11 +1,12 @@
 """ PCA9685 controller. """
 
-__author__ = "Alexander Sowitzki"
-
 import mauzr
 import mauzr.hardware.controller
 from mauzr.serializer import Struct
 from mauzr.hardware.controller import TimedPublisher
+
+__author__ = "Alexander Sowitzki"
+
 
 class Controller(TimedPublisher):
     """ Controller for PCA9685 PWM devices.
@@ -33,15 +34,15 @@ class Controller(TimedPublisher):
 
         self._mqtt.setup_publish(cfg["topic"], Struct("!" + "H" * 16))
 
-        serializer = Struct("!H")
+        ser = Struct("!H")
         for pin, subcfg in cfg["pins"].items():
             m = {"pin": pin, "mapper": angle_mapper(*(subcfg["angles"] +
                                                       subcfg["pwms"]))}
             self._mapping[subcfg["topic"]] = m
-            self._mqtt.subscribe(subcfg["topic"], self._on_angle, serializer, 0)
+            self._mqtt.subscribe(subcfg["topic"], self._on_angle, ser, 0)
 
-        TimedPublisher.__init__(self, core, "<PCA9685@{}>".format(cfg["topic"]),
-                                cfg["interval"])
+        name = "<PCA9685@{}>".format(cfg["topic"])
+        TimedPublisher.__init__(self, core, name, cfg["interval"])
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _on_angle(self, topic, angle):
@@ -52,6 +53,7 @@ class Controller(TimedPublisher):
         if self._values != self._old_values:
             self._mqtt.publish(self._cfg["topic"], self._values, True)
             self._old_values = list(self._values)
+
 
 def angle_mapper(angle_min, angle_max, pwm_min, pwm_max):
     """ Create PWM mapper funtion for angles.
@@ -77,16 +79,8 @@ def angle_mapper(angle_min, angle_max, pwm_min, pwm_max):
 
     return _map
 
-def main():
-    """ Main method for the Controller. """
-    # Setup core
-    core = mauzr.linux("mauzr", "pca9685controller")
-    # Setup MQTT
-    core.setup_mqtt()
-    # Spin up controller
-    Controller(core)
-    # Run core
-    core.run()
 
-if __name__ == "__main__":
-    main()
+def main():
+    """ Entry point. """
+
+    mauzr.cpython("mauzr", "pca9685controller", Controller)

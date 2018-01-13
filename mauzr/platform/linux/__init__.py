@@ -1,7 +1,9 @@
 """ Bootstrap the mauzr agent on linux systems. """
-__author__ = "Alexander Sowitzki"
 
 import mauzr.platform.cpython
+
+__author__ = "Alexander Sowitzki"
+
 
 class Core(mauzr.platform.cpython.Core):
     """ Manage program components on linux platforms.

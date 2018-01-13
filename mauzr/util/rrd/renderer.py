@@ -1,11 +1,12 @@
-#!/usr/bin/python3
 """ Renderer for RRD databases. """
-__author__ = "Alexander Sowitzki"
 
 import time
 import itertools
-import rrdtool # pylint: disable=import-error
+import rrdtool  # pylint: disable=import-error
 import mauzr
+
+__author__ = "Alexander Sowitzki"
+
 
 class Renderer:
     """ Render graphs from RRD files.
@@ -60,6 +61,7 @@ class Renderer:
                 g.append(f"LINE2:{entry['name']}#{color}:{entry['name']}")
 
             rrdtool.graph(g)
+
 
 def main():
     """ Entry point for the rrd renderer. """

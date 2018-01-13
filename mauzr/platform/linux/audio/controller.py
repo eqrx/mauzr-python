@@ -1,7 +1,9 @@
 """ Controller for linux audio drivers."""
-__author__ = "Alexander Sowitzki"
 
 import mauzr.serializer
+
+__author__ = "Alexander Sowitzki"
+
 
 class Controller:
     """ Manage :class:`mauzr.linux.audio.linker.Linker` over the network.

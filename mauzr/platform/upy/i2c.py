@@ -1,8 +1,10 @@
 """ Provide I2C functionality for pycm devices. """
+
+import ustruct  # pylint: disable=import-error
+import machine  # pylint: disable=import-error
+
 __author__ = "Alexander Sowitzki"
 
-import ustruct # pylint: disable=import-error
-import machine # pylint: disable=import-error
 
 class Bus:
     """ Manage an I2C bus.
