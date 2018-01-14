@@ -23,9 +23,8 @@ class Driver(DelayedPollingDriver):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self._address = cfg["address"]
         self._base = cfg["base"]
-        self._i2c = core.i2c
+        self._i2c = core.i2c(cfg["address"])
 
         DelayedPollingDriver.__init__(self, core, self._base, "BME280",
                                       30000, 12000)
@@ -40,26 +39,25 @@ class Driver(DelayedPollingDriver):
         if not self._mqtt.connected:
             raise OSError("MQTT not connected")
 
-        pt_calibrations = self._i2c.read_register(self._address, 0x88,
-                                                  fmt="<HhhHhhhhhhhhBB")
-        h_calibration = self._i2c.read_register(self._address, 0xE1, amount=7)
+        pt_calibrations = self._i2c.read_register(0x88, fmt="<HhhHhhhhhhhhBB")
+        h_calibration = self._i2c.read_register(0xE1, amount=7)
         self._mqtt.publish(self._base + "calibrations/pt",
                            pt_calibrations, True)
         self._mqtt.publish(self._base + "calibrations/h", h_calibration, True)
-        self._i2c.write(self._address, [0xf4, 0x3f])
+        self._i2c.write([0xf4, 0x3f])
         super()._init()
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _poll(self):
         """ Begin reading a new sample. """
 
-        self._i2c.write(self._address, [0xf2, 1])
-        self._i2c.write(self._address, [0xf4, 0x25])
+        self._i2c.write([0xf2, 1])
+        self._i2c.write([0xf4, 0x25])
         self._receive_task.enable()
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _receive(self):
         """ Finalize reading and publish readout. """
 
-        readout = self._i2c.read_register(self._address, 0xf7, amount=8)
+        readout = self._i2c.read_register(0xf7, amount=8)
         self._mqtt.publish(self._base + "readout", readout, True)

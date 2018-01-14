@@ -20,7 +20,8 @@ class Pins:
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
         core.add_context(self)
-        self._pins = {}
+        self._inputs = {}
+        self._outputs = {}
         self.listeners = []
         self._task = core.scheduler(self._poll, 50, single=False).enable()
 
@@ -44,7 +45,7 @@ class Pins:
 
         GPIO.setup(name, GPIO.IN, pull_up_down=self.PULL_MAPPING[pullup])
 
-        self._pins[name] = {"name": name, "type": "in", "value": None}
+        self._inputs[name] = {"name": name, "value": None}
 
     def setup_output(self, name, pwm=False, initial=False):
         """ Set pin as output.
@@ -57,18 +58,18 @@ class Pins:
         :type initial: bool
         """
 
-        self._pins[name] = {"name": name, "type": "out", "pwm": None}
+        self._outputs[name] = {"name": name, "pwm": None}
 
         GPIO.setup(name, GPIO.OUT)
         if pwm:
             pwm = GPIO.PWM(name, 200)
             pwm.start(initial * 100.0)
-            self._pins[name]["pwm"] = pwm
+            self._outputs[name]["pwm"] = pwm
         else:
             self[name] = initial
 
     def _poll(self):
-        for pin in [pin for pin in self._pins.values() if pin["type"] == "in"]:
+        for pin in self._inputs.values():
             name = pin["name"]
             value = self[name]
             if value != pin["value"]:
@@ -83,7 +84,7 @@ class Pins:
     def __setitem__(self, name, value):
         # Set the value of an output pin.
 
-        if self._pins[name]["pwm"] is not None:
-            self._pins[name]["pwm"].ChangeDutyCycle(value * 100.0)
+        if self._outputs[name]["pwm"] is not None:
+            self._outputs[name]["pwm"].ChangeDutyCycle(value * 100.0)
         else:
             GPIO.output(name, value)

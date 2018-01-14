@@ -21,9 +21,8 @@ class Driver(DelayedPollingDriver):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
 
-        self._i2c = core.i2c
+        self._i2c = core.i2c(cfg["address"])
         self._mqtt = core.mqtt
-        self._address = cfg["address"]
         self._base = cfg["base"]
 
         core.mqtt.setup_publish(self._base + "channels",
@@ -35,13 +34,13 @@ class Driver(DelayedPollingDriver):
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _init(self):
         self._on(True)
-        self._i2c.write(self._address, [0x81, 2])
+        self._i2c.write([0x81, 2])
         self._on(False)
 
         super()._init()
 
     def _on(self, value):
-        self._i2c.write(self._address, [0x80, 3 if value else 0])
+        self._i2c.write([0x80, 3 if value else 0])
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _poll(self):
@@ -53,7 +52,7 @@ class Driver(DelayedPollingDriver):
     def _receive(self):
         """ Called when a fetch is finished. """
 
-        broadband = self._i2c.read_register(self._address, 0xac, fmt="<H")
-        ir = self._i2c.read_register(self._address, 0xae, fmt="<H")
+        broadband = self._i2c.read_register(0xac, fmt="<H")
+        ir = self._i2c.read_register(0xae, fmt="<H")
         self._on(False)
         self._mqtt.publish(self._base + "channels", (broadband, ir), True)

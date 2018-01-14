@@ -37,8 +37,7 @@ class Driver(mauzr.hardware.driver.Driver):
     def __init__(self, core, cfgbase="pca9685", **kwargs):
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
-        self._i2c = core.i2c
-        self._address = cfg["address"]
+        self._i2c = core.i2c(cfg["address"])
 
         name = "<PCA9685@{}>".format(cfg["topic"])
         mauzr.hardware.driver.Driver.__init__(self, core, name)
@@ -47,22 +46,25 @@ class Driver(mauzr.hardware.driver.Driver):
 
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _init(self):
-        self._i2c.write(self._address, [Driver.MODE2, Driver.OUTDRV])
-        self._i2c.write(self._address, [Driver.MODE1, Driver.ALLCALL])
+        self._i2c.write([Driver.MODE2, Driver.OUTDRV])
+        self._i2c.write([Driver.MODE1, Driver.ALLCALL])
         time.sleep(0.005)  # wait for oscillator
-        mode1 = self._i2c.read_register(self._address, Driver.MODE1, fmt="B")
+        mode1 = self._i2c.read_register(Driver.MODE1, fmt="B")
         mode1 = mode1 & ~Driver.SLEEP  # wake up (reset sleep)
-        self._i2c.write(self._address, [Driver.MODE1, mode1])
+        self._i2c.write([Driver.MODE1, mode1])
         time.sleep(0.005)  # wait for oscillator
         mauzr.hardware.driver.Driver._init(self)
 
     def _set_pwm(self, ch, on, off):
         # Set a single PWM.
 
-        self._i2c.write(self._address, [Driver.LED0_ON_L+4*ch, on & 0xff])
-        self._i2c.write(self._address, [Driver.LED0_ON_H+4*ch, on >> 8])
-        self._i2c.write(self._address, [Driver.LED0_OFF_L+4*ch, off & 0xff])
-        self._i2c.write(self._address, [Driver.LED0_OFF_H+4*ch, off >> 8])
+        data = ((Driver.LED0_ON_L+4*ch, on & 0xff),
+                (Driver.LED0_ON_H+4*ch, on >> 8),
+                (Driver.LED0_OFF_L+4*ch, off & 0xff),
+                (Driver.LED0_OFF_H+4*ch, off >> 8))
+
+        for d in data:
+            self._i2c.write(d)
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _on_angle(self, _topic, pwms):

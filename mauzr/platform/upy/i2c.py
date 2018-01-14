@@ -6,6 +6,21 @@ import machine  # pylint: disable=import-error
 __author__ = "Alexander Sowitzki"
 
 
+class Device:
+    def __init__(self, bus, address):
+        self._bus = bus
+        self._address = address
+
+    def write(self, data):
+        self._bus.write(self._address, data)
+
+    def read(self, amount):
+        self._bus.read(self._address, amount)
+
+    def read_register(self, register, amount=None, fmt=None):
+        self._bus.read_register(self._address, register, amount, fmt)
+
+
 class Bus:
     """ Manage an I2C bus.
 
@@ -30,6 +45,9 @@ class Bus:
         sda, scl = [machine.Pin(p) for p in cfg["pins"]]
         self.i2c = machine.I2C(cfg["bus"],
                                sda=sda, scl=scl, freq=cfg["baudrate"])
+
+    def __call__(self, address):
+        return Device(self, address)
 
     def write(self, address, data):
         """ Write data to a device.
@@ -77,7 +95,7 @@ class Bus:
         :rtype: object
         """
 
-        if amount is None and fmt is not None:
+        if amount is None:
             # Calculate amount if fmt is given and amount is not set
             amount = ustruct.calcsize(fmt)
 

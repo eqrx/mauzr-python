@@ -85,7 +85,7 @@ class Task:
         :rtype: bool
         """
 
-        return self.pending_in <= 0
+        return self.enabled and self.pending_in <= 0
 
     def _next_execution(self):
         """
@@ -148,22 +148,21 @@ class Scheduler:
 
         raise NotImplementedError()
 
+    def _handle_pending(self):
+        pending_tasks = [task for task in self.tasks if task.pending]
+        [task.execute() for task in pending_tasks]
+        return bool(pending_tasks)
+
+    def _handle_active(self):
+        active_tasks = [task for task in self.tasks if task.enabled]
+        if active_tasks:
+            d = min([task.pending_in for task in active_tasks] + [300])
+            self.idle(d)
+            return True
+
     def _handle(self):
         """ Handle the current state of the scheduler. """
 
-        # Fetch all active tasks
-        active_tasks = [task for task in self.tasks if task.enabled]
-        # Fetch all pending tasks
-        pending_tasks = [task for task in active_tasks if task.pending]
-
-        if pending_tasks:
-            # There are pending tasks, execute them all and bail
-            for task in pending_tasks:
-                task.execute()
-        elif active_tasks:
-            # No pending tasks but active tasks, wait for the next one
-            d = min([task.pending_in for task in active_tasks] + [300])
-            self.idle(d)
-        else:
+        if not self._handle_pending() and not self._handle_active():
             # No active tasks, go idle
             self._wait()

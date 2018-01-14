@@ -57,8 +57,7 @@ class Driver(mauzr.hardware.driver.Driver):
         topic = cfg["topic"]
         name = "<SSD1308@{}>".format(topic)
         mauzr.hardware.driver.Driver.__init__(self, core, name)
-        self._i2c = core.i2c
-        self._address = cfg["address"]
+        self._i2c = core.i2c(cfg["address"])
         self._external_vcc = False
         self._dimensions = cfg["dimensions"]
         self._pages = cfg["dimensions"][1] // 8
@@ -103,7 +102,7 @@ class Driver(mauzr.hardware.driver.Driver):
         self._write_cmd(Driver.SET_PAGE_ADDR)
         self._write_cmd(0)
         self._write_cmd(self._pages - 1)
-        self._i2c.write(self._address, frame)
+        self._i2c.write(frame)
 
     def _write_cmd(self, cmd):
-        self._i2c.write(self._address, (0x80, cmd))
+        self._i2c.write((0x80, cmd))

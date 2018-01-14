@@ -43,7 +43,6 @@ class Manager:
         self._host_task.enable(instant=True)
 
         self.connection_listeners = []
-        self._delayed_publishes = []
 
         core.add_context(self)
 
@@ -57,6 +56,14 @@ class Manager:
     def _next_host(self):
         self.mqtt.set_host(**self._hosts[self._current_config])
         self._current_config = min(self._current_config+1, len(self._hosts)-1)
+
+    def _setup_session(self):
+        self._log.warning("Session missing, publishing default values")
+
+        # Publish default values
+        for c in self._publications.values():
+            if c["default"] is not None:
+                self.mqtt.publish(c["topic"], c["default"], c["qos"], True)
 
     def on_connect(self, session_present):
         """ Subscribe all subscriptions.
@@ -73,16 +80,7 @@ class Manager:
             self.mqtt.subscribe(config["topic"], config["qos"])
 
         if not session_present:
-            self._log.warning("Session missing, publishing default values")
-
-            # Publish default values
-            for c in self._publications.values():
-                if c["default"] is not None:
-                    self.mqtt.publish(c["topic"], c["default"], c["qos"], True)
-
-        for delayed in self._delayed_publishes:
-            self.publish(*delayed)
-        self._delayed_publishes = []
+            self._setup_session()
 
         [listener(True) for listener in self.connection_listeners]
 
@@ -107,25 +105,21 @@ class Manager:
         :raises Exception: Errors of callback.
         """
 
-        if topic not in self._subscriptions:
-            return
-
         # Fetch information and dispatch callback
         config = self._subscriptions[topic]
+        # Deserialize if serializer configured
+        if config["serializer"] is not None:
+            try:
+                payload = config["serializer"].unpack(payload)
+            except Exception:
+                self._log.error("Error deserializing value "
+                                "%s for topic %s", payload, topic)
+                raise
+        self._log.debug("Received %s: %s", topic, payload)
+
         try:
-            # Deserialize if serializer configured
-            if config["serializer"] is not None:
-                try:
-                    payload = config["serializer"].unpack(payload)
-                except Exception:
-                    self._log.error("Error deserializing value "
-                                    "%s for topic %s",
-                                    payload, topic)
-                    raise
-            self._log.debug("Received %s: %s", topic, payload)
             # Inform all callbacks
-            for callback in config["callbacks"]:
-                callback(topic, payload)
+            [cb(topic, payload) for cb in config["callbacks"]]
         except Exception as err:
             self._log.error("Exception %s for %s. Terminating.",
                             err, config["topic"])
@@ -133,6 +127,12 @@ class Manager:
             self._core.on_failure()
             # Raise exception to the mqtt handler (May be ignored)
             raise
+
+    @staticmethod
+    def _verify_topic(topic):
+        if "+" in topic or "#" in topic:
+            raise NotImplementedError("Wildcards are currently "
+                                      "not supported in topics")
 
     def subscribe(self, topic, callback, serializer, qos):
         """ Subscribe to a topic.
@@ -155,19 +155,7 @@ class Manager:
                             conflicting manner.
         """
 
-        if "+" in topic or "#" in topic[:-1]:
-            raise ValueError("No wildcards allowed except # at end of topic")
-
-        if topic.endswith("#"):
-            if topic[-2] != "/":
-                raise ValueError("If last topic char is #, "
-                                 "previous char must be /")
-            directory = topic[:-2]
-            for other_topic in self._subscriptions:
-                if other_topic.startswith(directory):
-                    raise ValueError("When using wildcards you may not "
-                                     "to any topic in the target directory "
-                                     "explicitly")
+        self._verify_topic(topic)
 
         config = None
         if topic in self._subscriptions:
@@ -182,8 +170,6 @@ class Manager:
             config = {"topic": topic, "qos": qos, "callbacks": [callback],
                       "serializer": serializer}
             self._subscriptions[topic] = config
-
-
 
     def setup_publish(self, topic, serializer, qos, default=None):
         """ Prepare publishing to a topic.
@@ -229,18 +215,10 @@ class Manager:
 
         config = self._publications[topic]
         if not self.connected:
-            if config["qos"] > 0:
-                self._log.debug("Delaying publish %s: %s", topic, payload)
-                self._delayed_publishes.append((topic, payload, retain))
             return
 
         self._log.debug("Publishing %s: %s", topic, payload)
         if config["serializer"] is not None:
-            try:
-                payload = config["serializer"].pack(payload)
-            except Exception:
-                self._log.error("Error serializing value %s for topic %s",
-                                payload, topic)
-                raise
+            payload = config["serializer"].pack(payload)
 
         return self.mqtt.publish(topic, payload, config["qos"], retain)

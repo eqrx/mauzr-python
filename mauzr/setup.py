@@ -30,36 +30,39 @@ class DockerCommand(setuptools.Command):
     def finalize_options(self):
         """ Collect parameters. """
 
-        if self.slug is None:
-            raise ValueError("Slug not set")
-
-    def run(self):
-        """ Execute command. """
-
         import git
         repo = git.Repo()
 
         if repo.is_dirty():
             raise RuntimeError("Workspace must be clean")
 
-        branch = repo.active_branch
-        branch_suffix = f"-{branch}" if str(branch) != "master" else ""
-        commit = repo.head.object.hexsha
-        arch = {"x86_64": "amd64", "armv7l": "arm"}[platform.machine()]
+        if self.slug is None:
+            raise ValueError("Slug not set")
+
         timestamp = datetime.datetime.now().isoformat()
+        branch = repo.active_branch
+        self.branch_suffix = f"-{branch}" if str(branch) != "master" else ""
+        self.commit = repo.head.object.hexsha
+        self.arch = {"x86_64": "amd64", "armv7l": "arm"}[platform.machine()]
+
+        self.build_args = ("--build-arg", f"VERSION={branch}",
+                           "--build-arg", f"VCS_REF={self.commit}",
+                           "--build-arg", f"BUILD_DATE={timestamp}")
+        if not self.nopull:
+            self.build_args += ("--pull",)
+
+    def run(self):
+        """ Execute command. """
 
         for variant in os.listdir(".docker"):
-            tags = [f"{self.slug}:{variant}-{arch}{suffix}" for suffix in
-                    (f"-{commit}", branch_suffix)]
-            subprocess.check_call(["docker", "build", "-t", tags[0],
-                                   "-f", f".docker/{variant}",
-                                   "" if self.nopull else "--pull",
-                                   "--build-arg", f"VERSION={branch}",
-                                   "--build-arg", f"VCS_REF={commit}",
-                                   "--build-arg", f"BUILD_DATE={timestamp}",
-                                   "."])
+            tags = [f"{self.slug}:{self.variant}-{self.arch}{self.suffix}"
+                    for suffix in (f"-{self.commit}", self.branch_suffix)]
+            subprocess.check_call(("docker", "build", "-t", tags[0],
+                                   "-f", f".docker/{variant}") +
+                                  self.build_args + (".",))
 
             subprocess.check_call(("docker", "tag") + tuple(tags))
+
             for tag in tags:
                 subprocess.check_call(("docker", "push", tag))
 
@@ -67,8 +70,8 @@ class DockerCommand(setuptools.Command):
                 cmd = ("manifest-tool", "push", "from-args",
                        "--ignore-missing", "--platforms",
                        "linux/amd64,linux/arm", "--template",
-                       tag.replace(f"-{arch}", "-ARCH"), "--target",
-                       tag.replace(f"-{arch}", ""))
+                       tag.replace(f"-{self.arch}", "-ARCH"), "--target",
+                       tag.replace(f"-{self.arch}", ""))
                 subprocess.check_call(cmd)
 
 
@@ -110,6 +113,12 @@ class ESPFlashCommand(setuptools.Command):
     """ Setuptools command for esp. """
     # pylint: disable=attribute-defined-outside-init
 
+    image = "eqrx/mauzr-build:esp"
+    steps = ((("esp8285",), "export FLASH_MODE=dout"),
+             (("esp8266", "esp8285"), "rm -rf esp8266/build/*"),
+             (("esp8266", "esp8285"), "make -C esp8266 all"),
+             (("esp32",), "make -C esp32"))
+
     description = "Flash mauzr to esp devices"
     """ Command description. """
     user_options = [("erase", "e", "Board is new (erase flash)"),
@@ -128,33 +137,25 @@ class ESPFlashCommand(setuptools.Command):
     def finalize_options(self):
         """ Collect parameters. """
 
+        cmd = f"export PORT={self.port} && "
+        cmd += " && ".join([step for boards, step in self.steps
+                            if self.board in boards])
+        if self.erase:
+            cmd += "erase "
+        if self.port is not None:
+            cmd += "deploy "
+        cmd += f" && chown {os.geteuid()} -R /opt/mauzr/build"
+        self.cmd = cmd
+
     def run(self):
         """ Execute command. """
 
-        image = "eqrx/mauzr-build:esp"
         root = Path(".").resolve()
         (root/"build"/"esp"/"32").mkdir(parents=True, exist_ok=True)
         (root/"build"/"esp"/"8266").mkdir(parents=True, exist_ok=True)
-
-        cmd = f"export PORT={self.port} && " if self.port else ""
-        cmd += "export FLASH_MODE=dout && " if self.board == "esp8285" else ""
-        if self.board in ("esp8266", "esp8285"):
-            cmd += "rm -rf esp8266/build/* && make -C esp8266 all "
-        elif self.board == "esp32":
-            cmd += "make -C esp32 "
-        else:
-            raise ValueError("Invalid board")
-
-        cmd += "erase " if self.erase and self.port else ""
-        cmd += "deploy " if self.port else ""
-        cmd += f" && chown {os.geteuid()} -R /opt/mauzr/build"
-
-        print(cmd)
-
         run_cmd = ("docker", "run", "--privileged", "-v", f"{root}:/opt/mauzr",
-                   image, "sh", "-c", cmd)
-
-        subprocess.check_call(("docker", "pull", image))
+                   self.image, "sh", "-c", self.cmd)
+        subprocess.check_call(("docker", "pull", self.image))
         subprocess.check_call(run_cmd)
 
 

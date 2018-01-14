@@ -46,8 +46,7 @@ class Driver(mauzr.hardware.driver.PollingDriver):
         name = "<Trellis@{}>".format(self._base)
         mauzr.hardware.driver.PollingDriver.__init__(self, core, self._base,
                                                      name, cfg["interval"])
-        self._i2c = core.i2c
-        self._address = cfg["address"]
+        self._i2c = core.i2c(cfg["address"])
         self._keys = None
         self._lastkeys = None
 
@@ -68,32 +67,32 @@ class Driver(mauzr.hardware.driver.PollingDriver):
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _init(self):
         # Turn on the oscillator.
-        self._i2c.write(self._address, [0x21])
+        self._i2c.write([0x21])
         # No blinking
-        self._i2c.write(self._address, [0x81])
+        self._i2c.write([0x81])
         # Max brightness.
         self._brightness(self._bs)
         # Turn on interrupt, active high.
-        self._i2c.write(self._address, [0xa1])
+        self._i2c.write([0xa1])
 
         super()._init()
 
     @mauzr.hardware.driver.guard(OSError, suppress=True, ignore_ready=True)
     def _reset(self):
-        self._i2c.write(self._address, [0] * 33)
+        self._i2c.write([0] * 33)
         super()._reset()
 
     def _brightness(self, brightness):
         brightness = max(0, min(brightness, 15))
-        self._i2c.write(self._address, [0xe0 | brightness])
+        self._i2c.write([0xe0 | brightness])
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _poll(self):
         self._lastkeys = self._keys
-        self._keys = self._i2c.read_register(self._address, 0x40, 6)
+        self._keys = self._i2c.read_register(0x40, 6)
         if self._keys != self._lastkeys:
             self._mqtt.publish(self._base + "buttons", self._keys, True)
 
     @mauzr.hardware.driver.guard(OSError, suppress=True)
     def _on_message(self, _topic, values):
-        self._i2c.write(self._address, values)
+        self._i2c.write(values)

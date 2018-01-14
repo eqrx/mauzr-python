@@ -82,12 +82,9 @@ class Scheduler(mauzr.platform.scheduler.Scheduler):
     def run(self):
         """ Run the scheduler and process tasks. """
 
-        try:
-            # While running
-            while not self._shutdown_event.is_set():
-                # Clear enabled event
-                self._enabled_event.clear()
-                # Handle the scheduler
-                self._handle()
-        finally:
-            pass
+        # While running
+        while not self._shutdown_event.is_set():
+            # Clear enabled event
+            self._enabled_event.clear()
+            # Handle the scheduler
+            self._handle()
