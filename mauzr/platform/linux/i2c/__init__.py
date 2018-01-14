@@ -153,9 +153,36 @@ class Device:
 
 
 class Bus:
-    def __init__(self, core, path):
+    """ Manage an I2C bus.
+
+    :param core: Core instance.
+    :type core: object
+    :param cfgbase: Configuration entry for this unit.
+    :type cfgbase: str
+    :param kwargs: Keyword arguments that will be merged into the config.
+    :type kwargs: dict
+
+    **Configuration:**
+
+        - **baudrate** (:class:`int`) - Baudrate of the bus.
+        - **pins** (:class:`tuple`) - Pins to use for the bus (SDA, SCL) \
+            as tuple of strings.
+    """
+
+    def __init__(self, core, cfgbase="i2c", **kwargs):
+        cfg = core.config[cfgbase]
+        cfg.update(kwargs)
+
         self._core = core
-        self._path = path
+        self._path = cfg["path"]
 
     def __call__(self, address):
+        """ Create a device handle.
+
+        :param address: Address of the device.
+        :type address: int
+        :returns: The device handle.
+        :rtype: Device
+        """
+
         return Device(self._core, self._path, address)

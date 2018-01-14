@@ -45,7 +45,7 @@ class Enum:
     def __eq__(self, other):
         # Check if enum and fmt are the same
         if isinstance(other, self.__class__):
-            return self.enum_cls == other.enum and self.fmt == other.fmt
+            return self.enum_cls == other.enum_cls and self.fmt == other.fmt
         return False
 
 

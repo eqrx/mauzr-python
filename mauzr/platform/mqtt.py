@@ -187,10 +187,10 @@ class Manager:
                             in a conflicting manner.
         """
 
-        if "#" in topic or "+" in topic:
-            raise ValueError("Please do not use # or + in topic")
+        self._verify_topic(topic)
 
-        default = serializer.pack(default) if default is not None else None
+        if None not in (default, serializer):
+            default = serializer.pack(default)
         config = {"topic": topic, "serializer": serializer, "qos": qos,
                   "default": default}
 
