@@ -27,7 +27,7 @@ class Client:
 
         self._log = core.logger("mqtt-client")
 
-        self.client = paho.mqtt.client.Client()
+        self._client = paho.mqtt.client.Client()
         self._status_topic = None
         self._clean_session = not cfg.get("session", True)
         self.manager = None
@@ -41,7 +41,7 @@ class Client:
     def __enter__(self):
         # Start the connector.
 
-        self.client.loop_start()
+        self._client.loop_start()
 
     def set_host(self, **kwargs):
         """ Set host to connect to.
@@ -52,31 +52,32 @@ class Client:
 
         user = kwargs["user"]
         self._status_topic = "{}/agents/{}".format(user.split("-")[0], user)
-        self.client.reinitialise(client_id=user,
-                                 clean_session=self._clean_session)
-        self.client.username_pw_set(username=user, password=kwargs["password"])
-        self.client.will_set(self._status_topic, payload=b'\x00'.decode(),
-                             qos=2, retain=True)
-        self.client.on_connect = self._on_connect
-        self.client.on_disconnect = self._on_disconnect
-        self.client.on_message = self._on_message
+        self._client.reinitialise(client_id=user,
+                                  clean_session=self._clean_session)
+        self._client.username_pw_set(username=user,
+                                     password=kwargs["password"])
+        self._client.will_set(self._status_topic, payload=b'\x00'.decode(),
+                              qos=2, retain=True)
+        self._client.on_connect = self._on_connect
+        self._client.on_disconnect = self._on_disconnect
+        self._client.on_message = self._on_message
 
         if "ca" in kwargs:
-            self.client.tls_set(ca_certs=kwargs["ca"],
-                                cert_reqs=ssl.CERT_REQUIRED,
-                                tls_version=ssl.PROTOCOL_TLSv1_2,
-                                ciphers=None)
+            self._client.tls_set(ca_certs=kwargs["ca"],
+                                 cert_reqs=ssl.CERT_REQUIRED,
+                                 tls_version=ssl.PROTOCOL_TLSv1_2,
+                                 ciphers=None)
 
-        self.client.connect_async(kwargs["host"], kwargs["port"],
-                                  self._keepalive // 1000)
+        self._client.connect_async(kwargs["host"], kwargs["port"],
+                                   self._keepalive // 1000)
 
     def __exit__(self, *exc_details):
         # Disconnect and stop connector.
 
-        self.client.publish(self._status_topic, payload=b'\x00'.decode(),
-                            qos=2, retain=True)
-        self.client.loop_stop()
-        self.client.disconnect()
+        self._client.publish(self._status_topic, payload=b'\x00'.decode(),
+                             qos=2, retain=True)
+        self._client.loop_stop()
+        self._client.disconnect()
 
     def _on_disconnect(self, *details):
         # Indicate that the client disconnected from the broker.
@@ -85,8 +86,8 @@ class Client:
 
     def _on_connect(self, _client, _userdata, flags, _rc):
         # Indicate that the client connected to the broker.
-        self.client.publish(self._status_topic, payload=b'\x01'.decode(),
-                            qos=2, retain=True)
+        self._client.publish(self._status_topic, payload=b'\x01'.decode(),
+                             qos=2, retain=True)
         self.manager.on_connect(flags["session present"])
 
     def _on_message(self, client, userdata, message):
@@ -106,7 +107,7 @@ class Client:
         :rtype: object
         """
 
-        return self.client.subscribe(topic, qos)
+        return self._client.subscribe(topic, qos)
 
     def publish(self, topic, value, qos, retain):
         """ Publish a value to a topic.
@@ -123,4 +124,4 @@ class Client:
         :rtype: object
         """
 
-        return self.client.publish(topic, value, qos, retain)
+        return self._client.publish(topic, value, qos, retain)

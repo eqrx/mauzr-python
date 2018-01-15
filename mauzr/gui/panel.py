@@ -2,8 +2,9 @@
 
 import pygame  # pylint: disable=import-error
 from mauzr.gui.base import Vector
-from mauzr.gui.elements import Muter, Acceptor, AgentIndicator, Indicator
-from mauzr.gui.elements import ToggleController, SimpleController
+from mauzr.gui.elements.meta import Muter, Acceptor
+from mauzr.gui.elements.indicator import AgentIndicator, Indicator
+from mauzr.gui.elements.controller import ToggleController, SimpleController
 
 __author__ = "Alexander Sowitzki"
 
@@ -49,9 +50,9 @@ class Table:
         self._fps = cfg["fps"]
         self.elements = []
 
-        e = Muter(*self.layout(reversed(self._cell_count) - (1, 1)), self)
+        e = Muter(self.layout(reversed(self._cell_count) - (1, 1)), self)
         self.elements.append(e)
-        e = Acceptor(*self.layout(reversed(self._cell_count) - (2, 1)), self)
+        e = Acceptor(self.layout(reversed(self._cell_count) - (2, 1)), self)
         self.elements.append(e)
 
     def mute(self, value):
@@ -78,19 +79,22 @@ class Table:
         self._bell_reset_task.disable()
         self._bell_check_task.enable()
 
+    def _handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                # Return on quit
+                pygame.quit()
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Inform elements when mouse if clicked
+                pos = pygame.mouse.get_pos()
+                [indicator.on_mouse(pos) for indicator in self.elements]
+
     def loop(self):
         """ Perform the loop of pygame. """
 
         while not self._core.shutdown_event.is_set():
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    # Return on quit
-                    pygame.quit()
-                    return
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    # Inform elements when mouse if clicked
-                    pos = pygame.mouse.get_pos()
-                    [indicator.on_mouse(pos) for indicator in self.elements]
+            self._handle_events()
 
             # Draw each tick
             [indicator.draw() for indicator in self.elements]
@@ -98,37 +102,33 @@ class Table:
             pygame.display.flip()
             pygame.time.wait(1000//self._fps)
 
-    def agent_indicator(self, position, topic):
+    def agent_indicator(self, position, name):
         """ Create a new :class:`mauzr.gui.elements.AgentIndicator`.
 
         :param position: Cell postion of the elemnt (row, column as ints).
         :type position: tuple
-        :param topic: Topic to monitor.
-        :type topic: str
+        :param name: Agent to monitor.
+        :type name: str
         :returns: The new element.
         :rtype: mauzr.gui.elements.AgentIndicator
         """
 
-        element = AgentIndicator(self._core, topic,
-                                 *self.layout(position, (1, 1)))
+        element = AgentIndicator(self._core, name,
+                                 self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
-    def indicator(self, position, topic, ser, label, fmt, conditions, timeout):
+    # pylint: disable = redefined-builtin
+    def indicator(self, position, input, fmt, conditions, timeout):
         """ Create a new :class:`mauzr.gui.elements.Indicator`.
 
         :param position: Cell postion of the elemnt (row, column as ints).
         :type position: tuple
-        :param topic: Topic to monitor.
-        :type topic: str
-        :param ser: Serializer for the topic.
-        :type ser: object
-        :param label: Label to prepend the value with. Is separated from \
-                      it by ": ".
-        :type label: str
+        :param input: Topic and QoS of input.
+        :type input: tuple
         :param fmt: Format to use for displaying the topic value. Is expected \
                     to be in curly braces and with implicit position \
-                    reference. Will be concatenated to the internal format.
+                    reference.
         :type fmt: str
         :param conditions: Dictionary mapping :class:`mauzr.gui.ColorState` \
                            to functions. The function receives one parameter \
@@ -144,61 +144,50 @@ class Table:
         :rtype: mauzr.gui.elements.Indicator
         """
 
-        element = Indicator(self._core, topic, ser,
-                            label, fmt, conditions, timeout,
-                            *self.layout(position, (1, 1)))
+        element = Indicator(self._core, fmt, conditions, timeout,
+                            input, self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
-    def toggler(self, position, topic, label, qos, retain):
+    def toggler(self, position, label, retain, output):
         """ Create a new :class:`mauzr.gui.elements.ToggleController`.
 
         :param position: Cell postion of the elemnt (row, column as ints).
         :type position: tuple
-        :param topic: Topic to manage.
-        :type topic: str
-        :param qos: QoS to use for publish.
-        :type qos: int
-        :param retain: True if publish shall be retained.
-        :type retain: bool
         :param label: Label to prepend the value with. Is separated from \
                      it by ": ".
         :type label: str
+        :param retain: True if publish shall be retained.
+        :type retain: bool
+        :param output: Topic and QoS of output.
+        :type output: tuple
         :returns: The new element.
         :rtype: mauzr.gui.elements.ToggleController
         """
 
-        element = ToggleController(self._core, topic, qos, retain, label,
-                                   *self.layout(position, (1, 1)))
+        element = ToggleController(self._core, label, retain, output,
+                                   self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 
-    def sender(self, position,
-               send_topic, cond_topic, qos, retain, payload, label):
+    def sender(self, position, cond_topic, label, output):
         """ Create a new :class:`mauzr.gui.elements.SimpleController`.
 
         :param position: Cell postion of the elemnt (row, column as ints).
         :type position: tuple
-        :param send_topic: Topic to send on.
-        :type send_topic: str
         :param cond_topic: Topic that has to be True to send.
         :type cond_topic: str
-        :param qos: QoS to use for publish.
-        :type qos: int
-        :param retain: True if publish shall be retained.
-        :type retain: bool
-        :param payload: Payload to send.
-        :type payload: bool
         :param label: Label to prepend the value with. Is separated from \
                      it by ": ".
+        :param output: Topic, payload, QoS and retainment of the sender.
+        :type output: str
         :type label: str
         :returns: The new element.
         :rtype: mauzr.gui.elements.ToggleController
         """
 
-        element = SimpleController(self._core, send_topic, cond_topic, qos,
-                                   retain, payload, label,
-                                   *self.layout(position, (1, 1)))
+        element = SimpleController(self._core, cond_topic, label, output,
+                                   self.layout(position, (1, 1)))
         self.elements.append(element)
         return element
 

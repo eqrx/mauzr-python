@@ -22,16 +22,11 @@ BC = BoolCondition
 BCS = mauzr.serializer.Enum(BC, "!H")
 
 
-def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
+def aggregate(core, handler, default, inputs, output):
     """ Aggregates multiple topics to a single one.
 
     :param core: Core instance.
     :type core: object
-    :param inputs: A list of tuples describing each input by listing topic and
-                   serializer. When a message arrives for these topics,
-                   it is added to the value list and passed to the
-                   hander callable.
-    :type inputs: tuple
     :param handler: Callable used for aggregation. Receives a dict of topic
                     states, the current topic and the current value as
                     arguments and is expected to return the new output
@@ -39,12 +34,13 @@ def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
     :type handler: callable
     :param default: Initial values to publish. May be None.
     :type default: object
-    :param out_topic: Output topic.
-    :type out_topic: str
-    :param serializer: Output serializer.
-    :type serializer: object
-    :param qos: QoS for input and output.
-    :type qos: int
+    :param inputs: A list of tuples describing each input by listing topic and
+                   serializer. When a message arrives for these topics,
+                   it is added to the value list and passed to the
+                   hander callable.
+    :type inputs: tuple
+    :param output: Topic, serializer and QoS of input.
+    :type output: tuple
 
     **Required core units**:
 
@@ -53,8 +49,8 @@ def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
 
     values = {}
     last = None
-    log = core.logger(f"<aggregate@{out_topic}>")
-    core.mqtt.setup_publish(out_topic, serializer, qos, default)
+    log = core.logger(f"<aggregate@{output[0]}>")
+    core.mqtt.setup_publish(*output, default)
 
     def _on_message(in_topic, value):
         nonlocal last
@@ -62,17 +58,17 @@ def aggregate(core, inputs, handler, default, out_topic, serializer, qos):
         ret = handler(values, in_topic, value)
         if ret is not None and (last is None or last != ret):
             last = ret
-            core.mqtt.publish(out_topic, ret, True)
+            core.mqtt.publish(output[0], ret, True)
             log.debug("Received for %s: %s - Publishing: %s",
                       in_topic, value, ret)
 
-    for in_topic, deserializer in inputs:
+    for in_topic, deserializer, qos in inputs:
         values[in_topic] = None
         core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
 
 
-def delay(core, condition, amount, payload, retain,
-          in_topic, out_topic, deserializer, serializer, qos):
+# pylint: disable = redefined-builtin
+def delay(core, condition, amount, payload, retain, input, output):
     """ Allows to send payload when a condition is met after a defined delay.
 
     :param core: Core instance.
@@ -86,27 +82,21 @@ def delay(core, condition, amount, payload, retain,
     :type payload: object
     :param retain: If True the retain flag is set.
     :type retain: bool
-    :param in_topic: Input topic.
-    :type in_topic: str
-    :param out_topic: Output topic.
-    :type out_topic: str
-    :param deserializer: Deserializer for the input.
-    :type deserializer: object
-    :param serializer: Output serializer.
-    :type serializer: object
-    :param qos: QoS for input and output.
-    :type qos: int
+    :param input: Topic, deserializer and QoS of input.
+    :type input: tuple
+    :param output: Topic, serializer and QoS of input.
+    :type output: tuple
 
     **Required core units**:
 
         - mqtt
     """
 
-    log = core.logger(f"<delay@{in_topic}-{out_topic}>")
-    core.mqtt.setup_publish(out_topic, serializer, qos)
+    log = core.logger(f"<delay@{input[0]}-{output[0]}>")
+    core.mqtt.setup_publish(*output)
 
     def _after_delay():
-        core.mqtt.publish(out_topic, payload, retain)
+        core.mqtt.publish(output[0], payload, retain)
         log.debug("Publishing: %s", payload)
 
     def _on_message(topic, message):
@@ -114,89 +104,12 @@ def delay(core, condition, amount, payload, retain,
             task.enable()
         log.debug("Received: %s - delaying", message)
 
-    core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
+    core.mqtt.subscribe(input[0], _on_message, input[1], input[2])
     task = core.scheduler(_after_delay, amount, single=True)
 
 
-def split(core, in_topic, out_topics, deserializer, serializer, default, qos):
-    """ Split a single topic into multiple.
-
-    :param core: Core instance.
-    :type core: object
-    :param in_topic: Input topic.
-    :type in_topic: str
-    :param out_topics: List of output topics.
-    :type out_topics: tuple
-    :param deserializer: Deserializer for the input.
-    :type deserializer: object
-    :param serializer: Serializer for the outputs.
-    :type serializer: object
-    :param default: Default output value.
-    :type default: object
-    :param qos: QoS for input and output.
-    :type qos: int
-
-    **Required core units**:
-
-        - mqtt
-    """
-
-    log = core.logger(f"<split@{in_topic}>")
-    [core.mqtt.setup_publish(topic, serializer, qos, default)
-     for topic, dflt in zip(out_topics, default)]
-
-    def _on_message(_topic, values):
-        log.debug("Received: %s", values)
-        [core.mqtt.publish(topic, value, True)
-         for topic, value in zip(out_topics, values)]
-
-    core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
-
-
-def merge(core, in_topics, out_topic, deserializer, serializer, default, qos):
-    """ Merge multiple topics into one.
-
-    :param core: Core instance.
-    :type core: object
-    :param in_topics: List of input topics.
-    :type in_topics: tuple
-    :param out_topic: Output topic
-    :type out_topic: str
-    :param deserializer: Deserializer for the inputs.
-    :type deserializer: object
-    :param serializer: Serializer for the output.
-    :type serializer: object
-    :param qos: QoS for input and output.
-    :type qos: int
-    :param default: Default input value.
-    :type default: object
-    :raise ValueError: If length if in_topics does not match default.
-
-    **Required core units**:
-
-        - mqtt
-    """
-
-    log = core.logger(f"<merge@{out_topic}>")
-    values = list(default)
-    if len(values) != len(in_topics):
-        raise ValueError("Need as many default values as input topics")
-    core.mqtt.setup_publish(out_topic, serializer, qos, values)
-    core.mqtt.publish(out_topic, values, True)
-
-    def _on_message(topic, value):
-        i = in_topics.index(topic)
-        values[i] = value
-        core.mqtt.publish(out_topic, values, True)
-        log.debug("Published: %s", values)
-
-    [core.mqtt.subscribe(topic, _on_message, deserializer, qos)
-     for topic in in_topics]
-
-
-# pylint: disable=redefined-builtin
-def convert(core, mapper, retain, default,
-            in_topic, out_topic, deserializer, serializer, qos):
+# pylint: disable = redefined-builtin
+def convert(core, mapper, retain, default, input, output):
     """ Convert the messages of one topic into messages in some other.
 
     :param core: Core instance.
@@ -207,24 +120,18 @@ def convert(core, mapper, retain, default,
     :type retain: bool
     :param default: Initial values to publish. May be None.
     :type default: object
-    :param in_topic: Topic of the input.
-    :type in_topic: str
-    :param out_topic: Topic of the output.
-    :type out_topic: str
-    :param deserializer: Deserializer for the input.
-    :type deserializer: object
-    :param serializer: Serializer for the output.
-    :type serializer: object
-    :param qos: QoS for input and output.
-    :type qos: int
+    :param input: Topic, deserializer and QoS of input.
+    :type input: tuple
+    :param output: Topic, serializer and QoS of input.
+    :type output: tuple
 
     **Required core units**:
 
         - mqtt
     """
 
-    log = core.logger(f"<convert@{in_topic}→{out_topic}>")
-    core.mqtt.setup_publish(out_topic, serializer, qos, default)
+    log = core.logger(f"<convert@{input[0]}→{output[0]}>")
+    core.mqtt.setup_publish(*output, default)
     last = None
 
     def _on_message(topic, value):
@@ -232,13 +139,13 @@ def convert(core, mapper, retain, default,
         ret = mapper(value)
         if ret is not None and (not retain or last != ret or last is None):
             last = ret
-            core.mqtt.publish(out_topic, ret, retain)
+            core.mqtt.publish(output[0], ret, retain)
             log.debug("Received %s - Published: %s", value, ret)
         else:
             log.debug("Received %s - Converted to: %s (Not published)",
                       value, ret)
 
-    core.mqtt.subscribe(in_topic, _on_message, deserializer, qos)
+    core.mqtt.subscribe(input[0], _on_message, input[1], input[2])
 
 
 def gate_bool(core, topic):
@@ -291,14 +198,14 @@ def gate_bool(core, topic):
 
     aggregate(core, ((con_tpc, BCS), (topic, BS)),
               lambda st, tpc, val: st[con_tpc] == BC.FREE and not st[topic],
-              True, on_allowed, BS, 0)
+              True, (on_allowed, BS, 0))
 
     aggregate(core, ((con_tpc, BCS), (topic, BS)),
               lambda st, tpc, val: st[con_tpc] == BC.FREE and st[topic],
-              False, off_allowed, BS, 0)
+              False, (off_allowed, BS, 0))
 
     aggregate(core, ((topic, BS), (con_tpc, BCS), (req_tpc, BS),
-                     (tgl_tpc, BS)), _handler, False, topic, BS, 0)
+                     (tgl_tpc, BS)), _handler, False, (topic, BS, 0))
 
 
 def to_string(core, topic, ser, converter=str):
@@ -315,7 +222,8 @@ def to_string(core, topic, ser, converter=str):
     :type converter: callable
     """
 
-    convert(core, converter, True, None, topic, topic + "/str", ser, SS, 0)
+    convert(core, converter, True, None,
+            (topic, ser, 0), (topic + "/str", SS, 0))
 
 
 def from_string(core, topic, retain, ser, converter):
@@ -335,4 +243,5 @@ def from_string(core, topic, retain, ser, converter):
     :type converter: callable
     """
 
-    convert(core, converter, retain, None, topic + "/str", topic, SS, ser, 0)
+    convert(core, converter, retain, None,
+            (topic + "/str", SS, 0), (topic, ser, 0))

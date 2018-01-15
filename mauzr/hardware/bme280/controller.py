@@ -60,13 +60,7 @@ class Controller:
         self._h5 = (struct.unpack_from("<b", buf, 5)[0] << 4) | (buf[4] >> 4)
         self._tfine = 0
 
-    def _on_readout(self, _topic, readout):
-        if self._t1 is None or self._h6 is None:
-            return
-        pres = ((readout[0] << 16) | (readout[1] << 8) | readout[2]) >> 4
-        temp = ((readout[3] << 16) | (readout[4] << 8) | readout[5]) >> 4
-        hum = (readout[6] << 8) | readout[7]
-
+    def _calc_values(self, hum, pres, temp):
         # temperature
         var1 = ((temp >> 3) - (self._t1 << 1)) * (self._t2 >> 11)
         var2 = (((((temp >> 4) - self._t1) * ((temp >> 4) - self._t1)) >>
@@ -76,8 +70,7 @@ class Controller:
 
         # pres
         var1 = self._tfine - 128000
-        var2 = var1 * var1 * self._p6
-        var2 = var2 + ((var1 * self._p5) << 17)
+        var2 = var1 * var1 * self._p6 + ((var1 * self._p5) << 17)
         var2 = var2 + (self._p4 << 35)
         var1 = (((var1 * var1 * self._p3) >> 8) + ((var1 * self._p2) << 12))
         var1 = (((1 << 47) + var1) * self._p1) >> 33
@@ -96,9 +89,19 @@ class Controller:
                                                    32768)) >> 10) +
                        2097152) * self._h2 + 8192) >> 14))
         h = h - (((((h >> 15) * (h >> 15)) >> 7) * self._h1) >> 4)
-        h = 0 if h < 0 else h
-        h = 419430400 if h > 419430400 else h
-        hum = h >> 12
+        hum = max(0, min(h, 419430400)) >> 12
+
+        return hum, pres, temp
+
+    def _on_readout(self, _topic, readout):
+        if self._t1 is None or self._h6 is None:
+            return
+
+        pres = ((readout[0] << 16) | (readout[1] << 8) | readout[2]) >> 4
+        temp = ((readout[3] << 16) | (readout[4] << 8) | readout[5]) >> 4
+        hum = (readout[6] << 8) | readout[7]
+
+        hum, pres, temp = self._calc_values(hum, pres, temp)
 
         for lbl, val, cor in zip(("humidity", "pressure", "temperature"),
                                  (hum // 1024, pres // 256, temp / 100),

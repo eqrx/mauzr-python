@@ -27,7 +27,6 @@ class Bot:
         cfg.update(kwargs)
 
         self.updater = telegram.ext.Updater(cfg["token"])
-        self.bot = self.updater.bot
         self.dispatcher = self.updater.dispatcher
 
     def add_command_handler(self, command, handler):

@@ -37,14 +37,15 @@ def guard(exceptions, suppress=False, ignore_ready=False):
             if not self._ready and not ignore_ready:
                 if not suppress:
                     raise DriverError("Driver not ready")
-            else:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    self._log.error(str(err))
-                    self._on_error(err)
-                    if not suppress:
-                        raise DriverError(err)
+                return
+
+            try:
+                return func(*args, **kwargs)
+            except exceptions as err:
+                self._log.error(str(err))
+                self._on_error(err)
+                if not suppress:
+                    raise DriverError(err)
 
         return wrapper
     return guard_decorator

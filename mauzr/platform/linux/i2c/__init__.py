@@ -21,13 +21,13 @@ class Device:
     :type address: int
     """
 
-    READ = 0
+    READ_ACTION = 0
     """ Indicate a read action in a transaction. """
-    WRITE = 1
+    WRITE_ACTION = 1
     """ Indicate a write action in a transaction. """
 
     def __init__(self, core, path, address):
-        self.device = path
+        self.path = path
         self.address = address
         self.fd = None
         core.add_context(self)
@@ -56,7 +56,7 @@ class Device:
         :rtype: object
         """
 
-        if amount is None and fmt is not None:
+        if amount is None:
             amount = struct.calcsize(fmt)
 
         buf = self.fd.read(amount)
@@ -85,8 +85,8 @@ class Device:
         if amount is None:
             amount = struct.calcsize(fmt)
 
-        buf = self.transaction(((self.WRITE, (register,)),
-                                (self.READ, amount)))[0]
+        buf = self._transaction(((self.WRITE_ACTION, (register,)),
+                                 (self.READ_ACTION, amount)))[0]
 
         if fmt:
             buf = struct.unpack(fmt, buf)
@@ -94,7 +94,24 @@ class Device:
 
         return buf
 
-    def transaction(self, actions):
+    def _encode_transaction(self, actions):
+        for action, data in actions:
+            if action == self.READ_ACTION:
+                amount = data
+                yield _types.Message(addr=self.address,
+                                     flags=_types.I2C_M_RD,
+                                     len=amount,
+                                     buf=create_string_buffer(amount))
+            elif action == self.WRITE_ACTION:
+                if not isinstance(data, bytes):
+                    data = bytes(data)
+                yield _types.Message(addr=self.address, flags=0,
+                                     len=len(data),
+                                     buf=create_string_buffer(data))
+            else:
+                raise ValueError("Invalid action: {}".format(action))
+
+    def _transaction(self, actions):
         """ Perform an I2C transaction.
 
         :param actions: Tuple of actions to perform.
@@ -104,44 +121,20 @@ class Device:
         :raise ValueError: If action is invalid.
         """
 
-        read_actions = []
-        coded_actions = []
-
-        # Encode all actions in list
-        for action, data in actions:
-            if action == self.READ:
-                amount = data
-                read = _types.Message(addr=self.address,
-                                      flags=_types.I2C_M_RD,
-                                      len=amount,
-                                      buf=create_string_buffer(amount))
-                read_actions.append(read)
-                coded_actions.append(read)
-            elif action == self.WRITE:
-                if not isinstance(data, bytes):
-                    data = bytes(data)
-                write = _types.Message(addr=self.address, flags=0,
-                                       len=len(data),
-                                       buf=create_string_buffer(data))
-                coded_actions.append(write)
-            else:
-                raise ValueError("Invalid action: {}".format(action))
-
-        if not coded_actions:
-            raise ValueError("Plz don't break the system")
+        actions = self._encode_transaction(actions)
 
         # Perform action set with magic
-        msgs = (_types.Message * len(actions))(*coded_actions)
+        msgs = (_types.Message * len(actions))(*actions)
         strct = _types.IoctlData(msgs=msgs, nmsgs=len(actions))
         fcntl.ioctl(self.fd, _types.I2C_RDWR, strct)
 
         # Return all reads
-        return [read.buf for read in read_actions]
+        return [msg.buf for msg in actions if msg.flags == _types.I2C_M_RD]
 
     def __enter__(self):
         # Open the bus file.
 
-        self.fd = io.open(self.device, "r+b", buffering=0)
+        self.fd = io.open(self.path, "r+b", buffering=0)
         flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         fcntl.fcntl(self.fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         fcntl.ioctl(self.fd, _types.I2C_SLAVE, self.address)

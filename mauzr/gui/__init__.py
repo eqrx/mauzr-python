@@ -116,8 +116,10 @@ class ColorStateMixin:
         state is applied to this mixin.
         """
 
-        for state in [s for s in ColorState if s in self._state_conditions]:
-            if self._state_conditions[state](value) and state != self._state:
+        sc = self._state_conditions
+
+        for state in ColorState:
+            if state in sc and sc[state](value) and state != self._state:
                 self._state = state
                 return
 
@@ -137,17 +139,15 @@ class TextMixin:
 
     :param text: Initial text to display.
     :type text: str
-    :param size: size of the text.
-    :type size: mauzr.gui.Vector
     :param font_name: Name of the font.
     :type font_name: str
     :param font_size: Size of the font
     :type font_size: int
     """
 
-    def __init__(self, text, size, font_name="Segoe Print", font_size=16):
+    def __init__(self, text, font_name="Segoe Print", font_size=16):
         self._font = pygame.font.SysFont(font_name, font_size)
-        self._text_offset = size // 2
+        self._text_offset = self._size // 2
         self._current_text = None
         self._text_surf = None
         self._text_rect = None

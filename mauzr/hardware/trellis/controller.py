@@ -69,6 +69,9 @@ class Controller:
             self._led_topics[index] = subcfg["led"]
             self._led_values[index] = subcfg["default"]
 
+        self._setup_mqtt(cfg)
+
+    def _setup_mqtt(self, cfg):
         self._mqtt.setup_publish(cfg["base"] + "leds", None, 0,
                                  default=self._led_bytes())
         self._mqtt.subscribe(cfg["base"] + "buttons", self._on_buttons,
@@ -94,11 +97,10 @@ class Controller:
     def _on_led(self, topic, val):
         changed = False
         for i in range(0, 16):
-            if topic == self._led_topics[i]:
-                if self._led_values[i] != val:
-                    self._log.debug("Led %s changed to %s", i, val)
-                    self._led_values[i] = val
-                    changed = True
+            if topic == self._led_topics[i] and self._led_values[i] != val:
+                self._log.debug("Led %s changed to %s", i, val)
+                self._led_values[i] = val
+                changed = True
         if changed:
             self._mqtt.publish(self._cfg["base"] + "leds",
                                self._led_bytes(), True)

@@ -22,7 +22,7 @@ class Device:
     """
 
     def __init__(self, core, path, address, speed):
-        self.device = path
+        self.path = path
         self.address = address
         self.speed = speed
         self.fd = None
@@ -31,7 +31,7 @@ class Device:
     def __enter__(self):
         # Open the bus file.
 
-        self.fd = io.open(self.device, "r+b", buffering=0)
+        self.fd = io.open(self.path, "r+b", buffering=0)
         return self
 
     def __exit__(self, *exc_details):

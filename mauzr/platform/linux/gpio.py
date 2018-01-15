@@ -26,7 +26,8 @@ class Pins:
                     "falling": "falling", "both": "both"}
 
     def __init__(self, core, cfgbase="gpio", **kwargs):
-        self.pins = {}
+        self._inputs = {}
+        self._outputs = {}
 
         cfg = core.config[cfgbase]
         cfg.update(kwargs)
@@ -48,7 +49,7 @@ class Pins:
     def __exit__(self, *exc_details):
         # Stop unit and reset all pins.
 
-        for pin in self.pins.values():
+        for pin in self._inputs.values() + self._outputs.values():
             # Unexport pin
             with contextlib.suppress(IOError):
                 with open("/sys/class/gpio/unexport", "w") as unexport:
@@ -89,7 +90,7 @@ class Pins:
             direction.write("in")
         # Open value file
         value_file = open(f"/sys/class/gpio/gpio{name}/value", "rt")
-        self.pins[name] = {"name": name, "type": "in", "file": value_file}
+        self._inputs[name] = {"name": name, "file": value_file}
 
     def setup_output(self, name, pwm=False, initial=False):
         """ Set pin as output.
@@ -113,24 +114,20 @@ class Pins:
             direction.write("out")
         value_file = open(f"/sys/class/gpio/gpio{name}/value", "wt")
         # Open value file
-        self.pins[name] = {"name": name, "type": "out", "file": value_file}
+        self._outputs[name] = {"name": name, "file": value_file}
         self[name] = float(initial)
 
     def __getitem__(self, name):
         # Retrieve value of an input pin.
 
-        pin = self.pins[name]
-        if pin["type"] != "in":
-            raise KeyError(f"Not an input: {name}")
+        pin = self._inputs[name]
         pin["file"].seek(0, io.SEEK_SET)
         return pin["file"].read(1) == "1"
 
     def __setitem__(self, name, value):
         # Set the value of an output pin.
 
-        pin = self.pins[name]
-        if pin["type"] != "out":
-            raise KeyError(f"Not an output: {name}")
+        pin = self._outputs[name]
         # Format value
         output = "{}\n".format(1 if value else 0)
         # Write to file
@@ -139,7 +136,7 @@ class Pins:
         pin["file"].flush()
 
     def _poll_inputs(self):
-        for pin in [pin for pin in self.pins.values() if pin["type"] == "in"]:
+        for pin in self._inputs:
             value = self[pin["name"]]
             if pin.get("old", None) != value:
                 pin["old"] = value
@@ -148,16 +145,13 @@ class Pins:
     def _select_inputs(self):
         # Check inputs for changes and inform listeners.
         # Check every value file with select
-        special_files = [pin["file"] for pin in self.pins.values()
-                         if pin["type"] == "in"]
-        _, _, changed_files = select.select([], [], special_files, 0)
+        files = [(pin["file"], pin["name"]) for pin in self._inputs.values()]
+        _, _, changed_files = select.select([], [], files, 0)
         # Check each changed file
         for changed_file in changed_files:
-            pin = [pin for pin in self.pins.values()
-                   if pin["file"] == changed_file][0]
+            name = files[changed_file]
             # Inform all listeners
-            [listener(pin["name"], self[pin["name"]])
-             for listener in self.listeners]
+            [listener(name, self[name]) for listener in self.listeners]
 
 
 class RaspberryPins(Pins):

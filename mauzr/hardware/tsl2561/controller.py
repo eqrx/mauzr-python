@@ -5,6 +5,10 @@ from mauzr.serializer import Struct as SS
 
 __author__ = "Alexander Sowitzki"
 
+FMAP = ((0, 0, 0), (0x40, 0x01f2, 0x01be), (0x80, 0x214, 0x2d1),
+        (0xc0, 0x23f, 0x37b), (0x0100, 0x270, 0x3fe),
+        (0x0138, 0x16f, 0x1fc), (0x019a, 0xd2, 0xfb), (0x29a, 0x18, 0x12))
+
 
 def control(core, cfgbase="tsl2561", **kwargs):
     """ Controller for tsl2561 devices.
@@ -36,22 +40,10 @@ def control(core, cfgbase="tsl2561", **kwargs):
         ratio = 0 if not channels[0] else int(channels[1] * 1024 / channels[0])
         ratio = (ratio + 1) >> 1
 
-        if ratio >= 0 and ratio <= 0x40:
-            f = (0x01f2, 0x01be)
-        elif ratio <= 0x80:
-            f = (0x214, 0x2d1)
-        elif ratio <= 0x00c0:
-            f = (0x23f, 0x37b)
-        elif ratio <= 0x0100:
-            f = (0x270, 0x3fe)
-        elif ratio <= 0x0138:
-            f = (0x16f, 0x1fc)
-        elif ratio <= 0x019a:
-            f = (0xd2, 0xfb)
-        elif ratio <= 0x29a:
-            f = (0x18, 0x12)
-        else:
-            f = (0, 0)
+        for tres, a, b in FMAP:
+            if ratio <= tres:
+                f = (a, b)
+                break
 
         channels = [ch * fi for ch, fi in zip(channels, f)]
         illuminance = (max(0, channels[0] - channels[1]) + 8192) >> 14

@@ -1,15 +1,12 @@
-"""
-.. module:: tests.conftest
-   :platform: cpython
-   :synopsis: Fixtures for testing.
-
-.. moduleauthor:: Alexander Sowitzki <dev@eqrx.net>
-"""
+""" Fixtures for testing. """
 
 import enum
 import time
 import pytest
 import mauzr.platform.cpython
+
+__author__ = "Alexander Sowitzki"
+
 
 def interaction(func):
     """ Decorator for mockups.
@@ -26,6 +23,7 @@ def interaction(func):
         func(*args)
         self._on_interaction()
     return _wrapper
+
 
 class MQTTMockup:
     """ a """
@@ -135,27 +133,24 @@ class MQTTMockup:
             self._publish_task.disable()
 
     def _on_interaction(self):
-        while True:
-            if not self._expected:
-                self._finish_event.set()
-                break
-            elif self._expected[0][0] == self._Type.INJ:
+        while self._expected:
+            if self._expected[0][0] == self._Type.INJ:
                 args = self._expected.pop(0)[1:]
                 self._publishes.append(args)
                 self._publish_task.enable()
             elif not self._actual:
-                break
+                return
             else:
-                expected = self._expected.pop(0)
-                actual = self._actual.pop(0)
-                assert expected == actual
+                assert self._expected.pop(0) == self._actual.pop(0)
+        self._finish_event.set()
 
     def __call__(self, delay, timeout):
         self._publish_task.enable()
         self._finish_event.wait(timeout)
         time.sleep(delay)
         assert not self._actual and not self._expected, \
-                "Elements missing: {}".format(self._expected)
+            "Elements missing: {}".format(self._expected)
+
 
 class CoreMockup(mauzr.platform.cpython.Core):
     """ CPython core with mockup elements. """
@@ -179,6 +174,7 @@ def core():
     c.setup_mqtt()
     yield c
 
+
 @pytest.fixture(scope="session")
 def merge():
     """ Create a configuration fixture for data merging. """
@@ -192,6 +188,7 @@ def merge():
         dflt = [8, 43, 15]
 
     yield _MergeConfig
+
 
 @pytest.fixture(scope="session")
 def split():
@@ -207,6 +204,7 @@ def split():
 
     yield _SplitConfig
 
+
 @pytest.fixture(scope="session")
 def conversion():
     """ Create a configuration fixture for data conversion. """
@@ -221,6 +219,7 @@ def conversion():
         ret = True
 
     yield _ConversionConfig
+
 
 @pytest.fixture(scope="session")
 def delay():

@@ -3,6 +3,9 @@ checks:
   argument-count:
     config:
       threshold: 7
+  method-complexity:
+    config:
+      threshold: 15
 plugins:
   pep8:
     enabled: true
@@ -10,3 +13,5 @@ plugins:
     enabled: true
   sonar-python:
     enabled: true
+exclude_patterns:
+- build/

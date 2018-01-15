@@ -1,6 +1,10 @@
 """ Configuration helper. """
 
+import os.path
+import glob
 import logging
+import contextlib
+import yaml
 
 __author__ = "Alexander Sowitzki"
 
@@ -64,9 +68,6 @@ class Config:
     def read_config(self):
         """ Find and read yaml configuration. """
 
-        import os.path
-        import yaml
-        import glob
         home = os.path.expanduser("~")
         path_canidates = [".mauzr.conf",
                           "{}.config/mauzr.conf".format(home),
@@ -75,28 +76,14 @@ class Config:
 
         id_str = "-".join(self.id)
 
+        global_config = ""
         for candidate in path_canidates:
-            try:
-                data = open(candidate, "r").read()
-            except IOError:
-                self._log.debug("Config file %s could not be opened",
-                                candidate)
-                continue
+            with contextlib.suppress(IOError):
+                global_config += "\n" + open(candidate, "r").read()
 
-            self._config = yaml.load(data)
-            if not self._config or id_str not in self._config:
-                self._log.debug("Config file %s does not"
-                                " contain entry for %s", candidate, id_str)
-                continue
-
-            self._config = self._config[id_str]
-            break
-        else:
-            self._log.debug("No config file found for %s", id_str)
-            self._config = {}
-
+        global_config = yaml.load(global_config)
+        self._config = global_config.get(id_str, {})
         self._config["id"] = self.id
-        return self._config
 
     def parse(self):
         """ Parse arguments and configuration. """
