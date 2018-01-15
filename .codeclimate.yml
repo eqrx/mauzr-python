@@ -6,6 +6,9 @@ checks:
   method-complexity:
     config:
       threshold: 15
+  similar-code:
+    config:
+      threshold: 55
 plugins:
   pep8:
     enabled: true
