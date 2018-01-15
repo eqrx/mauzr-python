@@ -196,16 +196,21 @@ def gate_bool(core, topic):
             elif tpc == tgl_tpc:
                 return not st[topic]
 
-    aggregate(core, ((con_tpc, BCS), (topic, BS)),
+    aggregate(core,
               lambda st, tpc, val: st[con_tpc] == BC.FREE and not st[topic],
-              True, (on_allowed, BS, 0))
+              True,
+              ((con_tpc, BCS, 0), (topic, BS, 0)), (on_allowed, BS, 0))
 
-    aggregate(core, ((con_tpc, BCS), (topic, BS)),
+    aggregate(core,
               lambda st, tpc, val: st[con_tpc] == BC.FREE and st[topic],
-              False, (off_allowed, BS, 0))
+              False,
+              ((con_tpc, BCS, 0), (topic, BS, 0)),
+              (off_allowed, BS, 0))
 
-    aggregate(core, ((topic, BS), (con_tpc, BCS), (req_tpc, BS),
-                     (tgl_tpc, BS)), _handler, False, (topic, BS, 0))
+    aggregate(core, _handler, False,
+              ((topic, BS, 0), (con_tpc, BCS, 0),
+               (req_tpc, BS, 0), (tgl_tpc, BS, 0)),
+              (topic, BS, 0))
 
 
 def to_string(core, topic, ser, converter=str):

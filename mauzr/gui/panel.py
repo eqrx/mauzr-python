@@ -119,7 +119,7 @@ class Table:
         return element
 
     # pylint: disable = redefined-builtin
-    def indicator(self, position, input, fmt, conditions, timeout):
+    def indicator(self, position, fmt, conditions, timeout, input):
         """ Create a new :class:`mauzr.gui.elements.Indicator`.
 
         :param position: Cell postion of the elemnt (row, column as ints).
