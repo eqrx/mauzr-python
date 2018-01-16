@@ -1,0 +1,9 @@
+#!/bin/bash
+
+docker manifest create -a mauzr/mauzr:generic-$GIT_SHA1 mauzr/mauzr:generic-$GIT_SHA1-amd64 mauzr/mauzr:generic-$GIT_SHA1-arm
+case $(uname -m)  in
+  x86_64) docker manifest annotate mauzr/mauzr:generic-$GIT_SHA1 \
+  mauzr/mauzr:generic-$GIT_SHA1-amd64 --os linux --arch amd64
+  ;;
+esac
+docker manifest push mauzr/mauzr:generic-$GIT_SHA1

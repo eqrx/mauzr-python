@@ -1,0 +1,8 @@
+#!/bin/bash
+
+case $(uname -m)  in
+  x86_64) docker build \
+  --build-arg VCS_REF=$GIT_SHA1 --build-arg BUILD_DATE=$(date -Iseconds) \
+  -t mauzr/mauzr:esp-$GIT_SHA1 .
+  ;;
+esac

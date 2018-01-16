@@ -82,6 +82,7 @@ class Config:
                 global_config += "\n" + open(candidate, "r").read()
 
         global_config = yaml.load(global_config)
+        global_config = global_config if global_config is not None else {}
         self._config = global_config.get(id_str, {})
         self._config["id"] = self.id
 

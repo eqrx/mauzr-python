@@ -1,0 +1,8 @@
+#!/bin/bash
+
+case $(uname -m)  in
+  armv7l) docker build \
+  --build-arg VCS_REF=$GIT_SHA1 --build-arg BUILD_DATE=$(date -Iseconds) \
+  -t mauzr/mauzr:raspberry-$GIT_SHA1-arm .
+  ;;
+esac

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+case $(uname -m)  in
+  armv7l) docker push mauzr/mauzr:raspberry-$GIT_SHA1-arm
+  ;;
+esac

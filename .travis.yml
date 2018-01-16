@@ -1,22 +1,23 @@
 language: bash
 
 env:
-- DOCKER_RUN="docker run --rm -v $PWD:/opt/mauzr eqrx/mauzr-build"
+- DOCKER_RUN="docker run --rm -v $PWD:/opt/mauzr mauzr/build"
 
 services:
 - docker
 
 stages:
 - test
+- distribute
 
 jobs:
   include:
   - stage: test
     script:
-    - ${DOCKER_RUN}:x86_64 ./setup.py pytest build_sphinx
+    - ${DOCKER_RUN} ./setup.py pytest build_sphinx
   - stage: distribute
     script:
-    - ${DOCKER_RUN}:x86_64 ./setup.py build_sphinx sdist bdist_wheel
+    - ${DOCKER_RUN} ./setup.py build_sphinx
     after_success:
     - sudo chown $(whoami) -R $PWD
     - echo "mauzr.eqrx.net" > build/sphinx/html/CNAME

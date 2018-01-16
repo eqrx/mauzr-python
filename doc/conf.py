@@ -85,7 +85,7 @@ html_theme = 'alabaster'
 # html_theme_options = {}
 html_theme_options = {
     'logo_name': 'true',
-    'github_user': 'eqrx',
+    'github_user': 'mauzr',
     'github_repo': 'mauzr'
 }
 

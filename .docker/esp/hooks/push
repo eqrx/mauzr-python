@@ -1,0 +1,6 @@
+#!/bin/bash
+
+case $(uname -m)  in
+  x86_64) docker push mauzr/mauzr:esp-$GIT_SHA1
+  ;;
+esac

@@ -4,8 +4,6 @@ from pathlib import Path
 import shutil
 import os
 import subprocess
-import datetime
-import platform
 import setuptools
 
 __author__ = "Alexander Sowitzki"
@@ -17,15 +15,11 @@ class DockerCommand(setuptools.Command):
 
     description = "Build and push image"
     """ Command description. """
-    user_options = [("slug", None, "Slug of the image"),
-                    ("nopull", "np", "Not pull build images")]
+    user_options = []
     """ Available options. """
 
     def initialize_options(self):
         """ Set default values for options. """
-
-        self.slug = None
-        self.nopull = False
 
     def finalize_options(self):
         """ Collect parameters. """
@@ -36,43 +30,18 @@ class DockerCommand(setuptools.Command):
         if repo.is_dirty():
             raise RuntimeError("Workspace must be clean")
 
-        if self.slug is None:
-            raise ValueError("Slug not set")
-
-        timestamp = datetime.datetime.now().isoformat()
-        branch = repo.active_branch
-        self.branch_suffix = f"-{branch}" if str(branch) != "master" else ""
         self.commit = repo.head.object.hexsha
-        self.arch = {"x86_64": "amd64", "armv7l": "arm"}[platform.machine()]
-
-        self.build_args = ("--build-arg", f"VERSION={branch}",
-                           "--build-arg", f"VCS_REF={self.commit}",
-                           "--build-arg", f"BUILD_DATE={timestamp}")
-        if not self.nopull:
-            self.build_args += ("--pull",)
 
     def run(self):
         """ Execute command. """
 
         for variant in os.listdir(".docker"):
-            tags = [f"{self.slug}:{self.variant}-{self.arch}{self.suffix}"
-                    for suffix in (f"-{self.commit}", self.branch_suffix)]
-            subprocess.check_call(("docker", "build", "-t", tags[0],
-                                   "-f", f".docker/{variant}") +
-                                  self.build_args + (".",))
+            hooks_kwargs = {"cwd": ".docker/"+variant,
+                            "env": {"GIT_SHA1": self.commit}}
 
-            subprocess.check_call(("docker", "tag") + tuple(tags))
-
-            for tag in tags:
-                subprocess.check_call(("docker", "push", tag))
-
-            for tag in tags:
-                cmd = ("manifest-tool", "push", "from-args",
-                       "--ignore-missing", "--platforms",
-                       "linux/amd64,linux/arm", "--template",
-                       tag.replace(f"-{self.arch}", "-ARCH"), "--target",
-                       tag.replace(f"-{self.arch}", ""))
-                subprocess.check_call(cmd)
+            subprocess.check_call(("./hooks/build",), **hooks_kwargs)
+            subprocess.check_call(("./hooks/push",), **hooks_kwargs)
+            subprocess.call(("./hooks/build",), **hooks_kwargs)
 
 
 class ESPBuildCommand(setuptools.Command):
@@ -98,8 +67,8 @@ class ESPBuildCommand(setuptools.Command):
         root = Path(".").resolve()
         uid = os.geteuid()
         cmd = ("make -C esp32 && rm -rf esp8266/build/* &&" +
-               f"make -C esp8266 && chown {uid} -R /opt/mauzr/build")
-        run_cmd = ("docker", "run", "-v", f"{root}:/opt/mauzr",
+               "make -C esp8266 && chown {} -R /opt/mauzr/build".format(uid))
+        run_cmd = ("docker", "run", "-v", root+":/opt/mauzr",
                    image, "sh", "-c", cmd)
 
         (root/"build"/"esp"/"32").mkdir(parents=True, exist_ok=True)
@@ -137,14 +106,14 @@ class ESPFlashCommand(setuptools.Command):
     def finalize_options(self):
         """ Collect parameters. """
 
-        cmd = f"export PORT={self.port} && "
+        cmd = "export PORT={} && ".format(self.port)
         cmd += " && ".join([step for boards, step in self.steps
                             if self.board in boards])
         if self.erase:
             cmd += "erase "
         if self.port is not None:
             cmd += "deploy "
-        cmd += f" && chown {os.geteuid()} -R /opt/mauzr/build"
+        cmd += " && chown {} -R /opt/mauzr/build".format(os.geteuid())
         self.cmd = cmd
 
     def run(self):
@@ -153,7 +122,7 @@ class ESPFlashCommand(setuptools.Command):
         root = Path(".").resolve()
         (root/"build"/"esp"/"32").mkdir(parents=True, exist_ok=True)
         (root/"build"/"esp"/"8266").mkdir(parents=True, exist_ok=True)
-        run_cmd = ("docker", "run", "--privileged", "-v", f"{root}:/opt/mauzr",
+        run_cmd = ("docker", "run", "--privileged", "-v", root+":/opt/mauzr",
                    self.image, "sh", "-c", self.cmd)
         subprocess.check_call(("docker", "pull", self.image))
         subprocess.check_call(run_cmd)

@@ -12,9 +12,8 @@ framework to simplify creation of new agents.
 Personally I dislike the assumption that a network can be "*isolated and
 secure*", so the framework needs to be secure, robust and reliable.
 
-- `mauzr on Github <https://github.com/eqrx/mauzr>`_
-- `mauzr on Docker Hub <https://hub.docker.com/r/eqrx/mauzr>`_
-- `Project to build the Docker image on Github <https://github.com/eqrx/mauzr-docker>`_
+- `mauzr on Github <https://github.com/mauzr/mauzr>`_
+- `mauzr on Docker Hub <https://hub.docker.com/r/mauzr/mauzr>`_
 
 .. toctree::
    :maxdepth: 1
