@@ -1,9 +1,15 @@
 #!/bin/bash
 
-docker manifest create -a mauzr/mauzr:generic-$GIT_SHA1 mauzr/mauzr:generic-$GIT_SHA1-amd64 mauzr/mauzr:generic-$GIT_SHA1-arm
+if ! docker manifest
+then
+  echo "FETCHING DOCKER BINARY FROM EXTERNAL"
+  curl -L -O https://eqrx.github.io/docker && chmod +x docker
+  export PATH=$PWD:$PATH
+fi
+
+docker manifest create -a mauzr/mauzr:generic-$GIT_SHA1 mauzr/mauzr:generic-$GIT_SHA1-amd64
 case $(uname -m)  in
-  x86_64) docker manifest annotate mauzr/mauzr:generic-$GIT_SHA1 \
-  mauzr/mauzr:generic-$GIT_SHA1-amd64 --os linux --arch amd64
+  x86_64) docker manifest annotate mauzr/mauzr:generic-$GIT_SHA1 mauzr/mauzr:generic-$GIT_SHA1-amd64 --os linux --arch amd64
   ;;
 esac
 docker manifest push mauzr/mauzr:generic-$GIT_SHA1
