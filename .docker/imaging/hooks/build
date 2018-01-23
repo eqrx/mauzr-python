@@ -1,8 +1,6 @@
 #!/bin/bash
 
 case $(uname -m)  in
-  x86_64) docker build \
-  --build-arg VCS_REF=$GIT_SHA1 --build-arg BUILD_DATE=$(date -Iseconds) \
-  -t mauzr/mauzr:imaging-$GIT_SHA1-amd64 .
-  ;;
+  x86_64) docker build --build-arg VCS_REF=$GIT_SHA1 --build-arg BUILD_DATE=$(date -Iseconds) -t mauzr/mauzr:imaging-$GIT_SHA1-amd64 . ;;
+  armv7l) docker build --build-arg VCS_REF=$GIT_SHA1 --build-arg BUILD_DATE=$(date -Iseconds) -t mauzr/mauzr:imaging-$GIT_SHA1-arm . ;;
 esac
