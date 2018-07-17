@@ -12,17 +12,11 @@ framework to simplify creation of new agents.
 Personally I dislike the assumption that a network can be "*isolated and
 secure*", so the framework needs to be secure, robust and reliable.
 
-- `mauzr on Github <https://github.com/mauzr/mauzr>`_
-- `mauzr on Docker Hub <https://hub.docker.com/r/mauzr/mauzr>`_
+- `mauzr on GitLab <https://gitlab.com/mauzr/mauzr>`_
 
 .. toctree::
-   :maxdepth: 1
-
-   quickstart
-   platform/index
-   data
-   hardware/index
-   util/index
+   :maxdepth: 2
+   :caption: Contents:
 
 Indices and tables
 ==================

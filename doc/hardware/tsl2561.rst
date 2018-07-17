@@ -1,7 +1,0 @@
-TSL2561
-^^^^^^^
-
-.. automodule:: mauzr.hardware.tsl2561
-    :members:
-    :show-inheritance:
-    :undoc-members:

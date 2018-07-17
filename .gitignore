@@ -1,6 +1,10 @@
+build
+.cache
+.coverage
+dist
+.eggs
+.git
+htmlcov
+mauzr.egg-info
 __pycache__
-dist/
-build/
-mauzr.egg-info/
-.eggs/
-.cache/
+.pytest_cache

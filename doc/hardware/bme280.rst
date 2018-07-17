@@ -1,7 +1,0 @@
-BME280
-^^^^^^
-
-.. automodule:: mauzr.hardware.bme280
-    :members:
-    :show-inheritance:
-    :undoc-members:

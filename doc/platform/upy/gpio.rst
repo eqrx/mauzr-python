@@ -1,7 +1,0 @@
-GPIO
-""""
-
-.. automodule:: mauzr.platform.upy.gpio
-    :members:
-    :show-inheritance:
-    :undoc-members:

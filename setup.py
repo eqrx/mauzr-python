@@ -8,7 +8,6 @@
 """
 
 import setuptools
-import mauzr.setup
 
 setuptools.setup(
     version=0,
@@ -20,8 +19,6 @@ setuptools.setup(
     description="Framework for developing cyber-physical systems and"
                 " IoT devices",
     packages=setuptools.find_packages(),
-    cmdclass={"espflash": mauzr.setup.ESPFlashCommand,
-              "dockerize": mauzr.setup.DockerCommand},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -40,31 +37,14 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Hardware :: Hardware Drivers'
     ],
-    setup_requires=[],
     tests_require=['pytest', 'pylint', 'pytest-pylint'],
-    install_requires=['paho-mqtt', 'PyYAML'],
     extras_require={
         "build": ["sphinx", "pytest-runner"],
-        "dockerbuild": ["gitpython"],
-        "espbuild": ["esptool", "requests"],
-        "cluster": ["RPi.GPIO", "prometheus_client"],
         "gui": ["pygame"],
-        "images": ["Pillow", "numpy"]
+        "images": ["numpy"]
     },
     entry_points={
-        "console_scripts": [
-            'mauzr-camera=mauzr.platform.hardware.camera:main',
-            'mauzr-linuxaudio=mauzr.platform.linux.audio.driver:main',
-            'mauzr-imageprocessor=mauzr.util.image.processor:main',
-            'mauzr-imageviewer=mauzr.util.image.viewer:main',
-            'mauzr-rrdlogger=mauzr.util.rrd.logger:main',
-            'mauzr-rrdrenderer=mauzr.util.rrd.renderer:main',
-            'mauzr-bme280controller=mauzr.hardware.bme280.controller:main',
-            'mauzr-pca9685controller=mauzr.hardware.pca9685.controller:main',
-            'mauzr-ssd1308converter=mauzr.hardware.ssd1308.converter:main',
-            'mauzr-trelliscontroller=mauzr.hardware.trellis.controller:main',
-            'mauzr-tsl2561controller=mauzr.hardware.tsl2561.controller:main',
-            'mauzr-ws2812converter=mauzr.hardware.ws2812.converter:main',
-        ]
+        "console_scripts": ['mauzr=mauzr.shell:main',
+                            'mauzr-cfg=mauzr.configurator:main']
     }
 )

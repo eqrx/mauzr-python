@@ -11,7 +11,7 @@ load-plugins=pylint.extensions.docparams
 confidence=
 enable=
 # Disabled warnings that give me false positives
-disable=not-an-iterable,not-context-manager,arguments-differ,expression-not-assigned,unsubscriptable-object,inconsistent-return-statements
+disable=not-an-iterable,not-context-manager,arguments-differ,expression-not-assigned,fixme
 
 [REPORTS]
 
@@ -68,7 +68,7 @@ name-group=
 no-docstring-rgx=^_
 property-classes=abc.abstractproperty
 variable-name-hint=(([a-z][a-z0-9_]{0,30})|(_[a-z0-9_]*))$
-variable-rgx=(([a-z][a-z0-9_]{0,30})|(_[a-z0-9_]*))$
+variable-rgx=(([A-Za-z][A-Za-z0-9_]{0,30})|(_[a-z0-9_]*))$
 
 [LOGGING]
 

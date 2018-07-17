@@ -12,8 +12,6 @@ checks:
 plugins:
   pep8:
     enabled: true
-  radon:
-    enabled: true
   sonar-python:
     enabled: true
 exclude_patterns:
