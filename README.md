@@ -1,7 +1,3 @@
-![](https://img.shields.io/travis/mauzr/mauzr.svg)
-![](https://img.shields.io/docker/build/mauzr/mauzr.svg)
-![](https://img.shields.io/codeclimate/maintainability/mauzr/mauzr.svg)
-
 mauzr
 =====
 
@@ -49,12 +45,12 @@ so you can use `git verify-tag` to inspect if the tag originated from me.
 - Receive the signing key:
   `gpg --recv-keys 0CDDE5DB`
 - VERIFY KEY CAREFULLY!
-  (Fingerprint: F2BD C496 45AB 1587 B6CC 280D 2ED5 9137 0CDD E5DB)
+  Fingerprint: F2BD C496 45AB 1587 B6CC 280D 2ED5 9137 0CDD E5DB
 - Clone and enter the repository:
   `git clone https://github.com/eqrx/mauzr.git && cd mauzr`
 - Verify commit history
 - Install with pip:
-  `pip3 install -U .`
+  `pip install -e .`
 
 How to contribute
 -----------------
