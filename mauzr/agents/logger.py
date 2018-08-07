@@ -4,7 +4,7 @@ import logging
 import contextlib
 from mauzr import Agent
 from mauzr.serializer import JSON
-from mauzr.mqtt import Handle
+from mauzr.mqtt import Handle, MQTTOfflineError
 
 __author__ = "Alexander Sowitzki"
 
@@ -56,12 +56,14 @@ class LogSender(Agent):
                 if data["exc_info"]:
                     data["exc_info"] = [str(e) for e in data["exc_info"]]
                 # Publish message and ignore failure
-                with contextlib.suppress(OSError):
+                with contextlib.suppress(OSError, MQTTOfflineError):
                     h(data)
         handler = _Handler(level=level)
         # Attach to root logger.
         handler.addFilter(_ShowerFilter(self.shell))
         self.shell.log.addHandler(handler)
+
+        self.update_agent(arm=True)
 
 
 class LogCollector(Agent):
@@ -82,6 +84,8 @@ class LogCollector(Agent):
         # Setup logging to file.
         handler = logging.FileHandler(self.shell.args.data_path/"log")
         self.core.log.addHandler(handler)
+
+        self.update_agent(arm=True)
 
     @staticmethod
     def _on_log(record, topic):

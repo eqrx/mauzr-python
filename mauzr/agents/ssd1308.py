@@ -14,13 +14,14 @@ class LowDriver(Agent, I2CMixin):
     """
 
     def __init__(self, *args, **kwargs):
+        self.pre, self.dim, self.frame_len = None, None, None
         super().__init__(*args, **kwargs)
 
         self.option("dimensions", "struct/!HH", "Width and height of display",
                     cb=self.on_dimensions)
         self.input_topic("frame", r"bytes/\d+", "Raw image frame")
 
-        self.pre, self.dim, self.frame_len = None, None, None
+        self.update_agent(arm=True)
 
     def on_dimensions(self, dim):
         """ Receive display dimensions and prepare controller for it.
@@ -95,6 +96,7 @@ class HighDriver(Agent):
 
         self.input_topic("input", r"image\/.+", "Image input")
         self.input_topic("output", r"bytes\/\d+", "Raw image output")
+        self.update_agent(arm=True)
 
     def on_input(self, image):
         # Get image dimensions

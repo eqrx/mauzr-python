@@ -166,8 +166,8 @@ def default_socket_factory(log, domain, ca, crt, key):  # pragma: no cover
                 try:
                     sock = socket.create_connection((host, port))
                     yield ctx.wrap_socket(sock, server_hostname=host.strip("."))
-                except (ValueError, OSError) as err:
-                    log.error("Establishing Connection failed: %s", err)
+                except (ValueError, OSError):
+                    log.exception("Establishing Connection failed")
                     yield None
     return _new
 
@@ -255,8 +255,8 @@ class Connector:
             self.timeout_task.enable()
             self.ping_task.enable()
             self.log.info("Connected")
-        except OSError as err:
-            self.log.warning("Connection failed: %s", str(err))
+        except OSError:
+            self.log.exception("Connection failed")
             self.disconnect()
 
     def _handshake(self):  # pragma: no cover
@@ -359,8 +359,11 @@ class Connector:
         # Fetch package ID.
         assert 0 <= qos <= 2
         if qos > 0:
+            if self.sock is None:
+                raise MQTTOfflineError()
             pkg_id = self.qos_shelf.new_pkg_id()
-            self.log.debug("Publishing %s with pkg id %s", topic, pkg_id)
+            if not topic.startswith("log/"):
+                self.log.debug("Publishing %s with pkg id %s", topic, pkg_id)
         else:
             pkg_id = None
             self.log.debug("Publishing %s", topic)

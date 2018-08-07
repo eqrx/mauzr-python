@@ -10,7 +10,6 @@ import threading
 import time
 import argparse
 from pathlib import Path
-from collections import Mapping
 import yaml
 from mauzr.serializer.generic import Serializer, Bytes
 from mauzr.shell import Shell
@@ -74,7 +73,7 @@ def process_cfg(shell, log, data, offset):
         ValueError: On error.
     """
 
-    if not isinstance(data, Mapping):
+    if not isinstance(data, dict):
         return
 
     special = frozenset(("_value",))

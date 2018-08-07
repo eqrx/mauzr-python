@@ -177,7 +177,7 @@ class I2CMixin:  # pragma: no cover
         self._option("i2c_path", "str", "Path of the I2C bus")
         self._option("i2c_address", "struct/B", "Address of the chip")
 
-        self._add_context(self.__i2c_context)
+        self.add_context(self.__i2c_context)
 
     @contextmanager
     def __i2c_context(self):

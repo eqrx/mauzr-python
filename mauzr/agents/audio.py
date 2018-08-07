@@ -11,13 +11,14 @@ class Player(Agent):
     """ Play a file or use espeak for TTS on the local machine. """
 
     def __init__(self, *args, **kwargs):
+        # Current process
+        self.process = None
         super().__init__(*args, **kwargs)
 
         self.input_topic("say", r"str", "Text to speak")
         self.input_topic("say", r"str", "File to play")
 
-        # Current process
-        self.process = None
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):

@@ -1,33 +1,12 @@
 """ Basics to implement an agent. """
 
-import enum
+import weakref
 import re
-from contextlib import contextmanager, ExitStack
+from contextlib import contextmanager, ExitStack, suppress
+from mauzr.mqtt import MQTTOfflineError
 from mauzr.serializer import Serializer, Struct, Topic, String
 
 __author__ = "Alexander Sowitzki"
-
-
-class AgentEvent(enum.Enum):
-    """ Contains event identifiers that indicates what happened with agents. """
-
-    WANTS_ACTIVATION = enum.auto()
-    """ Agent wants to be activated. """
-
-    WANTS_DEACTIVATION = enum.auto()
-    """ Agent wants to be deactivated. """
-
-    WANTS_RESTART = enum.auto()
-    """ Agent wants to be restarted.
-
-    Alias for WANTS_DEACTIVATION & WANTS_ACTIVATION.
-    """
-
-    WANTS_CREATION = enum.auto()
-    """ Agent was instantiated and wants setup. """
-
-    WANTS_DESTRUCTION = enum.auto()
-    """ Agent is done and wants removal from the shell. """
 
 
 class Agent:
@@ -48,13 +27,14 @@ class Agent:
         cfg_handle = shell.mqtt(topic=cfg_topic, qos=1, retain=True,
                                 ser=String(shell=shell,
                                            desc="Configuration entries"))
-        self.cfg_handle = cfg_handle
 
         status_topic = f"status/{shell.name}/{name}"
         status_ser = Struct(shell=shell, fmt="B", desc="Is this agent active")
+
+        self.cfg_handle = cfg_handle
         self.status_handle = shell.mqtt(topic=status_topic, qos=1, retain=True,
                                         ser=status_ser)
-
+        self.__armed = False
         self.options = {}
         self.__contexts = []
         self.__inputs = {}
@@ -64,27 +44,28 @@ class Agent:
         self.__stack = ExitStack()
 
         self.active = False  # Indicates if agent is active.
-        self.status_handle(False)
 
         self.log = shell.log.getChild(name)  # Logger for this agent.
 
+        weakref.finalize(self, self.log.info, "Finalized")
+
+        with suppress(MQTTOfflineError):
+            self.status_handle(False)
         # Add default context.
         self.add_context(self.setup)
-        # Inform shell that this agent was created.
-        shell.agent_changed(self, AgentEvent.WANTS_CREATION)
-
         # Make log level of agent an option.
         self.option("log_level", "str", "Log level of the agent",
                     cb=lambda l: self.log.setLevel(l.upper()),
                     restart=False, default="info")
-
         super().__init__()
+        self.shell.add_agent(self)
+
 
     def is_ready(self):
         """ True if agent is ready to be activated. """
 
         # If no missing topics are present the agent is ready.
-        return not bool(self.__missing_inputs)
+        return not self.__missing_inputs and self.__armed
 
     def __getattr__(self, name):
         """ Map agent options to object attributes. """
@@ -109,7 +90,8 @@ class Agent:
             l.extend([handle.sub(cb, **kwargs) for cb in cbs])
 
         self.active = True
-        self.status_handle(True)
+        with suppress(MQTTOfflineError):
+            self.status_handle(True)
         return self
 
     def __exit__(self, *exc_details):
@@ -117,19 +99,10 @@ class Agent:
 
         self.__stack.close()
         self.__input_subs.clear()
+
         self.active = False
-        self.status_handle(False)
-
-    def discard(self):
-        """ Call to destroy the agent. """
-
-        # Unsubscribe setup callbacks.
-        self.__cfg_subs = {}
-        # Deactivate if not already done.
-        if self.active:
-            self.__exit__(self, None, None, None)
-        # Inform shell that this agents needs to be finalized.
-        self.shell.agent_changed(self, AgentEvent.WANTS_DESTRUCTION)
+        with suppress(MQTTOfflineError):
+            self.status_handle(False)
 
     def guard_error(self, cb):
         """ Suppress any exception on the callback and stop the agent if any.
@@ -147,9 +120,10 @@ class Agent:
                 # Log into logger.
                 self.log.exception("Unhandled error occured")
                 # Restart agent on error.
-                self.shell.agent_changed(self, AgentEvent.WANTS_RESTART)
+                self.update_agent(restart=True)
                 raise
-        return _guard
+        #return _guard
+        return cb
 
     def __add_missing_input(self, handle):
         """ Register a setup topic to be required for the agent to function.
@@ -160,22 +134,45 @@ class Agent:
 
         assert handle.topic.startswith("cfg/"), f"Invalid topic: {handle.topic}"
 
-        # Report shell that this agent is not ready to run anymore.
-        if self.is_ready():
-            self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
-
         self.__missing_inputs.add(handle)  # Add to missing list.
-        self.log.info("Missing options are %s",
-                      [h.topic for h in self.__missing_inputs])
+        self.update_agent()
 
     def __rm_missing_input(self, handle):
         assert handle.topic.startswith("cfg/"), f"Invalid topic: {handle.topic}"
         self.__missing_inputs.discard(handle)
 
-        if self.is_ready():
-            self.shell.agent_changed(self, AgentEvent.WANTS_ACTIVATION)
-        self.log.info("Missing options are %s",
-                      [h.topic for h in self.__missing_inputs])
+        self.log.debug("Missing options are %s",
+                       [h.topic for h in self.__missing_inputs])
+        self.update_agent()
+
+    def update_agent(self, restart=False, discard=False, arm=False):
+        """ Update the state of this agent.
+
+        Args:
+            restart (bool): Force restart.
+            discard (bool): Discard the agent.
+            arm (bool): Arm this agent.
+        """
+
+        if arm:
+            self.__armed = True
+
+        if restart:
+            self.log.info("Restarting")
+
+        if self.active and (not self.is_ready() or restart or discard):
+            self.__exit__()
+            self.log.info("Deactivated")
+
+        if discard:
+            self.__cfg_subs.clear()
+            self.__contexts.clear()
+            self.log.info("Discarded")
+            return
+
+        if not self.active and self.is_ready():
+            self.__enter__()
+            self.log.info("Activated")
 
     def add_context(self, context):
         """ Add a context that is entered and exited by the agent.
@@ -235,7 +232,6 @@ class Agent:
             default (object): Default value to assume for this option.
         """
 
-
         if ser is None:
             ser = Serializer.from_well_known(shell=self.shell,
                                              fmt=fmt, desc=desc)
@@ -244,11 +240,10 @@ class Agent:
         handle = self.cfg_handle.child(topic=name, ser=ser, qos=1, retain=True)
 
         def _cb(value):
-
-            # Stop agent if it was active and restart was configured.
-            if restart:
-                self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
-
+            if value is None:
+                self.log.info("Option reset: %s", handle.topic)
+                self.__add_missing_input(handle)
+                return
             assert value is not None
 
             self.options[attr] = value  # Simply set value.
@@ -256,6 +251,9 @@ class Agent:
             self.__rm_missing_input(handle)
             if cb is not None:
                 self.guard_error(cb)(value)
+
+            if restart:
+                self.update_agent(restart=True)
 
         self.__cfg_subs[name] = handle.sub(_cb)
         self.__add_missing_input(handle)
@@ -285,6 +283,11 @@ class Agent:
         sub = sub if sub else {}
 
         def _source_cb(handle):
+            if handle is None:
+                self.log.info("Input reset: %s", cfg_handle.topic)
+                self.__add_missing_input(cfg_handle)
+                return
+
             fmt = handle.ser.fmt
             if not re.fullmatch(regex, fmt):
                 raise ValueError(f"Format {fmt} does not match {regex}.")
@@ -293,7 +296,7 @@ class Agent:
 
             # Stop agent if it was active and restart was configured.
             if restart:
-                self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
+                self.update_agent(restart=True)
 
             self.static_input(handle, cb, sub)
 
@@ -357,6 +360,11 @@ class Agent:
                                            qos=1, retain=True)
 
         def _source_cb(handle):
+            if handle is None:
+                self.log.info("Output reset: %s", cfg_handle.topic)
+                self.__add_missing_input(cfg_handle)
+                return
+
             fmt = handle.ser.fmt
             if not re.fullmatch(regex, fmt):
                 raise ValueError(f"Format {fmt} does not match {regex}.")
@@ -365,7 +373,7 @@ class Agent:
 
             # Stop agent if it was active and restart was configured.
             if restart:
-                self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
+                self.update_agent(restart=True)
 
             self.options[attr] = handle
 

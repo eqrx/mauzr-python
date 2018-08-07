@@ -22,27 +22,29 @@ class Systemd(Agent):
     """ Communication socket. """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.log.debug("Setting up for systemd")
-
         # Fetch communication socket address.
         addr = os.environ['NOTIFY_SOCKET']
         if addr[0] == "@":
             addr = '\0' + addr[1:]
         self.addr = addr
+        self.task = None
+        super().__init__(*args, **kwargs)
 
-        self.task = self._sched.every(5, self.watchdog)
+        self.log.debug("Setting up for systemd")
 
-        self.add_context(self._setup)
+        self.add_context(self.setup)
+
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
         # Mark service as started and activate watchdog.
-        self.notify("READY=1\nWATCHDOG=1\nSTATUS=Running\n")
-        self.task.enable(instant=True)
+        self.send("READY=1\nWATCHDOG=1\nSTATUS=Running\n")
+        self.task = self.every(5, self.reset_watchdog).enable(instant=True)
 
         yield
+
+        self.task = None
 
         # Notify about stop.
         self.send("STOPPING=1\n")

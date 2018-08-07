@@ -11,19 +11,18 @@ class PollMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Task for polling.
-        self.poll_task = self.every(None, self.poll)
+        self.poll_task = None
 
         # Make poll interval configurable.
-        self.option("interval", "struct/!I", "Poll intervall in milliseconds",
-                    cb=lambda x: self.poll_task.set(x/1000))
+        self.option("interval", "struct/!I", "Poll intervall in milliseconds")
         self.add_context(self.__poll_context)
 
     @contextmanager
     def __poll_context(self):
-        self.poll_task.enable(instant=True)
+        self.poll_task = self.every(self.interval/1000,
+                                    self.poll).enable(instant=True)
         yield
-        self.poll_task.disable()
-
+        self.poll_task = None
 
     def poll(self):
         """ Perfom the poll operation. """

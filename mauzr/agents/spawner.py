@@ -1,7 +1,8 @@
 """ Agent spawning. """
 
 import importlib
-from mauzr.agent import Agent, AgentEvent
+from contextlib import suppress
+from mauzr.agent import Agent
 from mauzr.serializer import String
 
 __author__ = "Alexander Sowitzki"
@@ -24,6 +25,7 @@ class AgentSpawner(Agent):
                                  qos=1, retain=True)
         self.static_input(handle, self.on_agent,
                           sub={"wants_handle": True})
+        self.update_agent(arm=True)
 
     def spawn_agent(self, factory, name):
         """ Spawn a given agent.
@@ -45,33 +47,38 @@ class AgentSpawner(Agent):
         agent = factory(shell, name)
 
         if not isinstance(agent, Agent):
-            log.error(f"Factory {factory} did not spawn an agent but {agent}")
+            log.error("Factory %s did not spawn an agent but %s",
+                      factory, agent)
+        log.info("Agent spawned: %s -> %s", agent.name, str(factory))
 
-    def on_agent(self, value, handle):
+    def on_agent(self, path, handle):
         """ Takes agent path and name and spawns the agent.
 
         Args:
-            value (object): Ignored.
+            path (str): Factory path.
             handle (Handle): The handle that received the path.
         """
 
         shell, log = self.shell, self.log
+        name = handle.chunks[-1]  # Agent name is last level of its topic.
+        assert name != '+', f"Agent path invalid {handle.topic}"
 
-        path = value
+        if name in self.shell.agents:
+            self.log.warning("Agent %s with %s already present", name, path)
+            return
+
+        if not path:
+            # Path is empty -> Agent needs to be removed
+            with suppress(KeyError):
+                shell.agents[name].update_agent(discard=True)
+                log.info("Agent cleared: %s", name)
+            return
 
         # Get agent path parts.
         if path.count(":") != 1:
             log.error("Invalid agent path: %s", path)
             return
         module_name, call_name = path.split(":")
-
-        name = handle.chunks[-1]  # Agent name is last level of its topic.
-        assert name != '+'
-
-        if path == "":
-            # Path is empty -> Agent needs to be removed
-            shell.agent_changed(shell[name], AgentEvent.WANTS_DESTRUCTION)
-            return
 
         # Import agent module.
         try:
@@ -81,5 +88,11 @@ class AgentSpawner(Agent):
             return
 
         # Get factory method.
-        factory = getattr(module, call_name)
+        try:
+            factory = getattr(module, call_name)
+        except AttributeError:
+            log.error("Agent module %s does not contain %s factory",
+                      module_name, call_name)
+            return
+
         self.spawn_agent(factory, name)

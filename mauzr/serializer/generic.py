@@ -147,6 +147,9 @@ class Struct(Serializer):
             SerializationError: When packing failes.
         """
 
+        if not data:
+            return None
+
         try:
             obj = struct.unpack(self.struct_fmt, data)
         except (struct.error, TypeError) as err:
@@ -277,6 +280,9 @@ class Eval(String):
         Raises:
             SerializationError: On error.
         """
+
+        if not data:
+            return None
 
         try:
             # pylint: disable=eval-used

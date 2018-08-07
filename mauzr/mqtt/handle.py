@@ -164,6 +164,7 @@ class Handle:
             self.last_received = value
 
         assert "+" not in handle.topic and "#" not in handle.topic
+        assert "+" not in handle.chunks and "#" not in handle.chunks
 
         for cb in self.callbacks:
             self.send_to_cb(cb, value, retained, duplicate, handle)

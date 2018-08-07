@@ -1,5 +1,6 @@
 """ GUI panels. """
 
+import weakref
 import math
 from contextlib import contextmanager
 import pygame  # pylint: disable=import-error
@@ -62,35 +63,20 @@ class BellMixin:
         pygame.init()
 
         self.bell_sound = pygame.mixer.Sound("/usr/share/sounds/alarm.wav")
-        self.bell_reset_task = self.after(10, self.bell_mute, [False])
-        self.bell_maintain_task = self.every(3, self.maintain_bell).enable()
+        self.__bell_task = None
         self.add_context(self.__bell_context)
 
     @contextmanager
     def __bell_context(self):
+        self.__bell_task = self.every(60,
+                                      self.maintain_bell).enable(instant=True)
         yield
-
-        self.bell_mute(True)
-
-    def bell_mute(self, value):
-        """ Mute or unmute bell.
-
-        Args:
-            value (bool): Mute if True else False
-        """
-
-        if value:
-            self.bell_reset_task.disable()
-            self.bell_maintain_task.disable()
-        else:
-            self.bell_reset_task.disable()
-            self.bell_maintain_task.enable()
+        self.__bell_task = None
 
     def maintain_bell(self):
         """ Maintain bell function. """
 
-        if False in [i.state_acknowledged for i in self.elements]:
-            self.bell_mute(False)
+        if False in [e.state_acknowledged for e in self.elements]:
             self.bell_sound.play()
 
 
@@ -103,11 +89,24 @@ class Window(BellMixin, Agent, PollMixin):
 
         self.cell_dimensions, self.cell_draw_dimensions = None, None
         self.surf = None
-        self.elements = set()
+        self.elements = weakref.WeakSet()
+        self.rects = weakref.WeakKeyDictionary()
 
         self.option("dimensions", r"struct/!HH", "Window size in pixels")
         self.option("cells", r"struct/BB", "Window size in cells")
         self.option("title", "str", "Window title")
+
+        self.update_agent(arm=True)
+
+    def add_element(self, element):
+        """ Add a GUI element.
+
+        Args:
+            element (mauzr.gui.Element): Element to add.
+        """
+
+        element.surface = None
+        self.elements.add(element)
 
     @contextmanager
     def setup(self):
@@ -121,57 +120,28 @@ class Window(BellMixin, Agent, PollMixin):
         self.cell_dimensions = [a // b for a, b
                                 in zip(self.dimensions, self.cells)]
 
+        self.shell.fire_agent_listeners("window")
         yield
-
-    def layout(self, position, extent):
-        """ Layout an element
-
-        Args:
-            position (Vector): Offset position in cells.
-            extent (Vector): Extent in cells.
-        Returns:
-            tuple: Two vectors containing start and end position in pixels.
-        """
-
-        cd = self.cell_dimensions
-
-        return  pygame.Rect([d*p+10 for d, p in zip(cd, position)],
-                            [d*(p+e)-20 for d, p, e
-                             in zip(cd, position, extent)])
-
-    def add_element(self, element):
-        """ Add a GUI element.
-
-        Args:
-            element (mauzr.gui.Element): Element to add.
-        """
-
-        self.elements.add(element)
-
-    def rm_element(self, element):
-        """ Add a GUI element.
-
-        Args:
-            element (mauzr.gui.Element): Element to add.
-        """
-
-        self.elements.discard(element)
-
-    def handle_events(self):
-        """ Handle pygame events. """
-
-        # Parse all events.
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # Inform elements when mouse if clicked
-                pos = pygame.mouse.get_pos()
-                [i.on_mouse(pos) for i in self.elements]
 
     def poll(self):
         """ Perform the loop of pygame. """
 
-        self.handle_events()
+        cd = self.cell_dimensions
+        mbd = False
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mbd = True
+        mpos = pygame.mouse.get_pos()
 
         # Draw each tick
-        [i.draw() for i in self.elements]
+        for e in self.elements:
+            if not e.active:
+                continue
+            pos, ext = e.positioning[0:2], e.positioning[2:4]
+            rect = pygame.Rect([d*p+10 for d, p in zip(cd, pos)],
+                               [d*e-20 for d, p, e in zip(cd, pos, ext)])
+            surf = self.surf.subsurface(rect)
+            if mbd and rect.collidepoint(mpos):
+                e.on_click()
+            e.draw(surf)
         pygame.display.flip()

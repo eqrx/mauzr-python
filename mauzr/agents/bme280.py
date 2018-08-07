@@ -11,16 +11,19 @@ class LowDriver(I2CMixin, PollMixin, Agent):
     """ Low driver for the BME280. """
 
     def __init__(self, *args, **kwargs):
+        self.collect_task = None
         super().__init__(*args, **kwargs)
 
         self.output_topic("calibration", r"struct\/!HhhHhhhhhhhhxBhB4s", None,
                           ser=Struct(shell=self.shell, fmt="33s",
                                      desc="Raw calibration data"))
         self.output_topic("output", r"struct\/8s", "Raw measurement")
-        self.collect_task = self.after(3, self.collect)
+
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
+        self.collect_task = self.after(3, self.collect)
         # Reset the chip
         self.i2c.write([0xf4, 0x3f])
         # Get calibration data
@@ -28,7 +31,7 @@ class LowDriver(I2CMixin, PollMixin, Agent):
              self.i2c.read_register(0xe1, amount=7))
         self.calibrations(c)
         yield
-        self.collect_task.disable()
+        self.collect_task = None
 
     def poll(self):
         """ Start the measurement and the collection task. """

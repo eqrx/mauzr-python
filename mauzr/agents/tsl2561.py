@@ -1,5 +1,6 @@
 """ Driver for TSL2561 devices. """
 
+import os
 from contextlib import contextmanager
 from mauzr import Agent, PollMixin, I2CMixin
 
@@ -20,16 +21,26 @@ class LowDriver(Agent, I2CMixin, PollMixin):
     """
 
     def __init__(self, *args, **kwargs):
+        self.collect_task = None
+        # Fetch communication socket address.
+        addr = os.environ['NOTIFY_SOCKET']
+        if addr[0] == "@":
+            addr = '\0' + addr[1:]
+        self.addr = addr
+        self.task = None
+
+        self.collect_task = None
         super().__init__(*args, **kwargs)
 
         self.output_topic("output",
                           r"struct\/<HH", "Output for measurements")
-
-        self.collect_task = self._sched.after(self.collect, 5)
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
         """ Set up the chip. """
+
+        self.collect_task = self.after(self.collect, 5)
 
         self.on(True)  # Turn chip on for configuration.
         self.i2c.write([0x81, 2])  # Reset gain setting to be sure.
@@ -37,7 +48,7 @@ class LowDriver(Agent, I2CMixin, PollMixin):
 
         yield
 
-        self.collect_task.disable()  # Disable collection task after agent off.
+        self.collect_task = None  # Disable collection task after agent off.
 
     def poll(self):
         """ Starts the measurement. """

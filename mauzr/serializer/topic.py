@@ -47,6 +47,9 @@ class Topic(Serializer):
             SerializationError: On error.
         """
 
+        if not data:
+            return None
+
         try:
             j = json.loads(data.decode())
         except json.JSONDecodeError as err:

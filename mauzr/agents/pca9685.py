@@ -28,7 +28,9 @@ class LowDriver(Agent, I2CMixin):
 
 class HighDriver(Agent):
     """ Converts float inputs into something the low level can handle. """
+
     def __init__(self, *args, **kwargs):
+        self._values = [0.0] * 16
         super().__init__(*args, **kwargs)
 
         self.output_topic("output", r"struct\/!16H", "")
@@ -37,7 +39,7 @@ class HighDriver(Agent):
                              f"Setting for PWM {i}",
                              sub={"wants_handle": True})
 
-        self._values = [0.0] * 16
+        self.update_agent(arm=True)
 
     def on_input(self, values):
         data = []

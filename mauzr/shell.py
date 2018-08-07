@@ -1,11 +1,14 @@
 """ Shell - Container and Manager for Agents. """
 
-import contextlib
+import sys
+import signal
+import weakref
+import time
+from contextlib import suppress
 import logging
 from argparse import ArgumentParser
 from os import environ as env
 from pathlib import Path
-from mauzr.agent import AgentEvent as AE
 from mauzr.mqtt.connector import Connector
 from mauzr.scheduler import Scheduler
 
@@ -16,10 +19,8 @@ class AgentHandlerMixin:
     """ Mixin for handling agents. """
 
     def __init__(self, thin=False):
-        self.agents = {}  # Agents of this shell.
-        self.changed_agents = []  # Agents that changed and require update.
-        self.agent_handle_task = self.sched.every(5, self.handle_agents)
-        self.agent_listeners = set()
+        self.agents = weakref.WeakValueDictionary()  # Agents of this shell.
+        self.agent_listeners = weakref.WeakSet()
 
         super().__init__(thin=thin)
 
@@ -32,96 +33,36 @@ class AgentHandlerMixin:
 
         self.agent_listeners.add(cb)
 
-    def rm_agent_listener(self, cb):
-        """ Removes an agent listener.
+    def add_agent(self, agent):
+        """ Add a new agent to the shell.
 
         Args:
-            cb (callable): Listener to remove.
+            agent (mauzr.Agent): New agent.
+        Raises:
+            KeyError: If agent already present.
         """
 
-        self.agent_listeners.discard(cb)
+        if agent.name in self.agents:
+            raise KeyError(f"Agent {agent.name} is already present")
+        self.agents[agent.name] = agent
 
-    def apply_agent_event(self, agent, ev):
-        """ Handle the change of a single agent.
+    def fire_agent_listeners(self, name):
+        """ Fire agent listeners.
 
         Args:
-            agent (object): Agent that changed.
-            ev (mauzr.AgentEvent): Event that caused the change.
-        Returns:
-            list: List containing tuples with agent and one event each that \
-                  were generated while handling the change.
+            name (str): Name that will be passed.
         """
 
-        a = agent
-
-        agents = self.agents
-        if ev is AE.WANTS_CREATION:
-            # Agent created - Add to list.
-            agents[a.name] = agent
-        elif ev is AE.WANTS_DESTRUCTION:
-            # Agent done - Destruct and remove from list.
-            a.discard()
-            del agents[a.name]
-        elif ev is AE.WANTS_ACTIVATION and not a.active and a.is_ready():
-            # Agent wants to be activated.
-            a.__enter__()
-        elif ev in (AE.WANTS_DEACTIVATION, AE.WANTS_RESTART) and a.active:
-            # Agent wants to be disabled (or restarted).
-            a.__exit__(self, None, None, None)
-            if ev is AE.WANTS_RESTART:
-                # Schedule activation if needed.
-                return [(agent, AE.WANTS_ACTIVATION)]
-        [cb(agent, ev) for cb in self.agent_listeners]
-        return []
-
-    def handle_agents(self):
-        """ Handle agent changes. """
-
-        events = [] # New events go here.
-        while self.changed_agents:
-            # Handle each changed agent.
-            events.extend(self.apply_agent_event(*self.changed_agents.pop(0)))
-        # Add new events to list.
-        self.changed_agents.extend(events)
-
-    def agent_changed(self, agent, event):
-        """ Report that an agent has changed its state.
-
-        Args:
-            agent (object): Agent that changed.
-            event (mauzr.AgentEvent): Event that caused the change.
-        """
-
-
-        self.changed_agents.append((agent, event))  # Put into list.
-
-        # Force immediate agent handling if setup is done.
-        if not self.agent_handle_task:
-            self.agent_handle_task.enable(instant=True)
+        [cb(name) for cb in self.agent_listeners]
 
     def shutdown_agents(self):
         """ Shutdown all present agents. """
 
-        while self.agents:
-            for agent in list(self.agents.values()):
-                self.apply_agent_event(agent, AE.WANTS_DESTRUCTION)
-
-
-    def __getattr__(self, name):
-        """ Shortcut to receive agent of the shell.
-
-        Args:
-            name (str): Name of the agent.
-        Returns:
-            object: The agent if found.
-        Raises:
-            AttributeError: If agent not found.
-        """
-
-        try:
-            return self.agents[name]
-        except KeyError:
-            raise AttributeError
+        with suppress(KeyError):
+            self.agents["spawner"].update_agent(discard=True)
+        for a in self.agents.values():
+            a.update_agent(discard=True)
+        time.sleep(1)
 
 
 class ParameterMixin:  # pragma: no cover
@@ -150,11 +91,11 @@ class ParameterMixin:  # pragma: no cover
         """
 
         arg = parser.add_argument
-        arg('name', default=env.get('MAUZR_NAME'))
-        arg('domain', default=env.get('MAUZR_DOMAIN'))
-        arg('key', default=env.get('MAUZR_KEY'))
-        arg('crt', default=env.get('MAUZR_CRT'))
-        arg('ca', default=env.get('MAUZR_CA'))
+        arg('--name', default=env.get('MAUZR_NAME'))
+        arg('--domain', default=env.get('MAUZR_DOMAIN'))
+        arg('--key', default=env.get('MAUZR_KEY'))
+        arg('--crt', default=env.get('MAUZR_CRT'))
+        arg('--ca', default=env.get('MAUZR_CA'))
         arg('--keepalive', default=env.get('MAUZR_KEEPALIVE', 60))
         arg('--backoff', default=env.get('MAUZR_BACKOFF', 10))
         arg('--max-sleep', default=env.get('MAUZR_MAX_SLEEP', 1))
@@ -237,8 +178,12 @@ def main():  # pragma: no cover
     Sets up logging and starts shell.
     """
 
-    logging.basicConfig()
-    with contextlib.suppress(KeyboardInterrupt):
+    def sigterm_handler(_signo, _stack_frame):
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+    logging.basicConfig(format='%(name)s: %(message)s')
+    with suppress(KeyboardInterrupt):
         Shell().run()
 
 if __name__ == "__main__":  # pragma: no cover

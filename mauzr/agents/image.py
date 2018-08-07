@@ -13,14 +13,15 @@ ROTATION_MAP = {0: None, 90: cv2.ROTATE_90_CLOCKWISE,
 class Processor(Agent):
     """ Perform image operations on an input and republish the result. """
 
-    def __init__(self, core, topics):
-        Agent.__init__(self, core, topics)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.option("resize", "struct/!H", "Resize to resolution")
         self.option("timestamp", "struct/?", "Apply timestamp")
         self.option("rotate", "struct/!H", "Rotation in degrees")
         self.input_topic("input", r"image/.*", "Input image")
         self.output_topic("output", r"image/.*", "Input image")
+        self.update_agent(arm=True)
 
     def on_input(self, image):
         """ Convert image. """

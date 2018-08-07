@@ -11,12 +11,14 @@ class FeedDisplayer(Element):
     """ Show an image feed on the GUI window. """
 
     def __init__(self, *args, **kwargs):
+        self.feed_surf, self.feed_rect = None, None
         super().__init__(*args, **kwargs)
 
         self.input_topic("feed", r"image", "Feed image",
                          ser=PygameSurface(shell=self.shell,
                                            desc="Feed display"))
-        self.feed_surf, self.feed_rect = None, None
+
+        self.update_agent(arm=True)
 
     def on_input(self, surface):
         self.feed_surf = pygame.transform.scale(surface, self.rect)

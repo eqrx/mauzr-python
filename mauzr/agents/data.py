@@ -1,7 +1,7 @@
 """ Data conversion helpers. """
 
 from contextlib import suppress, contextmanager
-import mauzr.serializer
+from mauzr.serializer import Eval
 from mauzr import Agent
 
 __author__ = "Alexander Sowitzki"
@@ -11,15 +11,16 @@ class Aggregator(Agent):
     """ Aggregates multiple inputs by using a converter function ."""
 
     def __init__(self, *args, **kwargs):
+        self.values = {}
+        self.output_value = None
         super().__init__(*args, **kwargs)
 
         self.option("inputs", "topics", "Input topics")
-        self.option("converter", None, "Converter method",
-                    ser=mauzr.serializer.Eval)
+        self.option("converter", fmt=None, desc=None,
+                    ser=Eval(shell=self.shell, desc="Aggregation method"))
         self.output_topic("output", r".*", "Output topic")
 
-        self.values = {}
-        self.output_value = None
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
@@ -58,13 +59,14 @@ class Converter(Agent):
     """ Convert an input via an converter function. """
 
     def __init__(self, *args, **kwargs):
+        self.value = None
         super().__init__(*args, **kwargs)
 
-        self.option("converter", None, "Converter method",
-                    ser=mauzr.serializer.Eval)
+        self.option("converter", fmt=None, desc=None,
+                    ser=Eval(shell=self.shell, desc="Converter method"))
         self.output_topic("output", r".*", "Output topic")
         self.input_topic("input", r".*", "Input topic")
-        self.value = None
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
@@ -89,18 +91,21 @@ class Delayer(Converter):
     """ Convert an input via an converter function and add a delay. """
 
     def __init__(self, *args, **kwargs):
+        self.task = None
         super().__init__(*args, **kwargs)
 
         self.option("delay", "struct/f", "Duration of the delay in seconds")
-        self.task = self.after(None, self.on_timeout)
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
+        self.task = self.after(None, self.on_timeout)
         if not callable(self.converter):
             raise ValueError("Converter is not callable")
         self.task.interval = self.delay
         with super().setup():
             yield
+        self.task = None
 
     def publish(self):
         # Start delay task if not already running.
