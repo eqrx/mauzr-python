@@ -19,20 +19,45 @@ class AgentSpawner(Agent):
         super().__init__(*args, **kwargs)
 
         handle = self.shell.mqtt(topic=f"cfg/{self.shell.name}/+",
-                                 ser=String("Agent path to load"),
+                                 ser=String(shell=self.shell,
+                                            desc="Agent path to load"),
                                  qos=1, retain=True)
         self.static_input(handle, self.on_agent,
-                          sub={"handle": True})
+                          sub={"wants_handle": True})
 
-    def on_agent(self, path, topic):
+    def spawn_agent(self, factory, name):
+        """ Spawn a given agent.
+
+        Args:
+            factory (callable): Factory method for the agent.
+            name (str): Name the agent is registered under.
+        """
+
+        assert name != '+'
+
+        shell, log = self.shell, self.log
+
+        if not callable(factory):
+            log.error("Agent factory %s is not callable", factory)
+            return
+
+        # Spawn agent.
+        agent = factory(shell, name)
+
+        if not isinstance(agent, Agent):
+            log.error(f"Factory {factory} did not spawn an agent but {agent}")
+
+    def on_agent(self, value, handle):
         """ Takes agent path and name and spawns the agent.
 
         Args:
-            path (str): Path to the callable that spawns an agent.
-            topic (Handle): The handle that received the path.
+            value (object): Ignored.
+            handle (Handle): The handle that received the path.
         """
 
         shell, log = self.shell, self.log
+
+        path = value
 
         # Get agent path parts.
         if path.count(":") != 1:
@@ -40,7 +65,8 @@ class AgentSpawner(Agent):
             return
         module_name, call_name = path.split(":")
 
-        name = topic.chunks[-1]  # Agent name is last level of its topic.
+        name = handle.chunks[-1]  # Agent name is last level of its topic.
+        assert name != '+'
 
         if path == "":
             # Path is empty -> Agent needs to be removed
@@ -56,12 +82,4 @@ class AgentSpawner(Agent):
 
         # Get factory method.
         factory = getattr(module, call_name)
-        if not callable(factory):
-            log.error("Agent factory %s is not callable", factory)
-            return
-
-        # Spawn agent.
-        agent = factory(self.shell, name)
-
-        if not isinstance(agent, Agent):
-            log.error(f"Factory {factory} did not spawn an agent but {agent}")
+        self.spawn_agent(factory, name)

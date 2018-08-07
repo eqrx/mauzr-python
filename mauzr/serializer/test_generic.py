@@ -20,44 +20,53 @@ class StructTest(unittest.TestCase):
         fmt = f"struct/{sub_fmt}"
         desc = "TestDescription"
 
-        ser = Struct(sub_fmt, desc)
+        ser = Struct(shell=None, fmt=sub_fmt, desc=desc)
         self.assertEqual(sub_fmt, ser.struct_fmt)
         self.assertEqual(fmt, ser.fmt)
 
-        self.assertRaises(ValueError, Struct, "!", desc)
-        self.assertRaises(ValueError, Struct, "ü", desc)
+        self.assertRaises(ValueError, Struct, shell=None, fmt="!", desc=desc)
+        self.assertRaises(ValueError, Struct, shell=None, fmt="ü", desc=desc)
 
-        self.assertTrue(Struct("!H", desc).simple_type)
-        self.assertTrue(Struct("H", desc).simple_type)
-        self.assertFalse(Struct("!HH", desc).simple_type)
-        self.assertFalse(Struct("HH", desc).simple_type)
+        self.assertTrue(Struct(shell=None, fmt="!H", desc=desc).simple_type)
+        self.assertTrue(Struct(shell=None, fmt="H", desc=desc).simple_type)
+        self.assertFalse(Struct(shell=None, fmt="!HH", desc=desc).simple_type)
+        self.assertFalse(Struct(shell=None, fmt="HH", desc=desc).simple_type)
 
         data = (2, 5)
         self.assertEqual(struct.pack("!HH", *data),
-                         Struct("!HH", desc).pack(data))
-        self.assertEqual(struct.pack("!H", 4), Struct("!H", desc).pack(4))
-        self.assertRaises(SerializationError, Struct("!H", desc).pack, (4,))
-        self.assertRaises(SerializationError, Struct("!H", desc).pack, data)
-        self.assertRaises(SerializationError, Struct("!H", desc).pack, "Test")
+                         Struct(shell=None, fmt="!HH", desc=desc).pack(data))
+        self.assertEqual(struct.pack("!H", 4),
+                         Struct(shell=None, fmt="!H", desc=desc).pack(4))
+        self.assertRaises(SerializationError,
+                          Struct(shell=None, fmt="!H", desc=desc).pack, (4,))
+        self.assertRaises(SerializationError,
+                          Struct(shell=None, fmt="!H", desc=desc).pack, data)
+        self.assertRaises(SerializationError,
+                          Struct(shell=None, fmt="!H", desc=desc).pack, "Test")
 
         data = bytes([1, 2, 3, 4])
         self.assertEqual(struct.unpack("!HH", data),
-                         Struct("!HH", desc).unpack(data))
+                         Struct(shell=None, fmt="!HH", desc=desc).unpack(data))
         data = bytes([1, 2])
         self.assertEqual(struct.unpack("!H", data)[0],
-                         Struct("!H", desc).unpack(data))
+                         Struct(shell=None, fmt="!H", desc=desc).unpack(data))
         self.assertRaises(SerializationError,
-                          Struct("!HH", desc).unpack, data)
+                          Struct(shell=None, fmt="!HH", desc=desc).unpack,
+                          data)
         self.assertRaises(SerializationError,
-                          Struct("!H", desc).unpack, "Test")
+                          Struct(shell=None, fmt="!H", desc=desc).unpack,
+                          "Test")
 
+        self.assertRaises(ValueError, Struct.from_fmt, shell=None,
+                          fmt="str", desc=desc)
+        self.assertRaises(ValueError, Struct.from_fmt, shell=None,
+                          fmt=None, desc=desc)
+        self.assertRaises(ValueError, Struct.from_fmt, shell=None,
+                          fmt="struct/", desc=desc)
+        self.assertRaises(ValueError, Struct.from_fmt, shell=None,
+                          fmt="struct/!", desc=desc)
 
-        self.assertRaises(ValueError, Struct.from_fmt, "str", desc)
-        self.assertRaises(ValueError, Struct.from_fmt, None, desc)
-        self.assertRaises(ValueError, Struct.from_fmt, "struct/", desc)
-        self.assertRaises(ValueError, Struct.from_fmt, "struct/!", desc)
-
-        ser2 = Struct.from_fmt(fmt, desc)
+        ser2 = Struct.from_fmt(shell=None, fmt=fmt, desc=desc)
         self.assertEqual(desc, ser2.desc)
         self.assertEqual(fmt, ser2.fmt)
 
@@ -87,7 +96,7 @@ class IntEnumTest(unittest.TestCase):
             V_B = 2
         desc = "SomeDesc"
 
-        ser = IntEnum(enum_cls=_E, enum_fmt="B", desc=desc)
+        ser = IntEnum(shell=None, enum_cls=_E, enum_fmt="B", desc=desc)
 
         self.assertEqual(bytes([1]), ser.pack(_E.V_A))
         self.assertEqual(bytes([1]), ser.pack(1))

@@ -3,35 +3,10 @@
 import math
 from contextlib import contextmanager
 import pygame  # pylint: disable=import-error
+from mauzr.agent.mixin.poll import PollMixin
 from mauzr import Agent
 
 __author__ = "Alexander Sowitzki"
-
-
-class Vector(tuple):
-    """ Helper class for vector operations. """
-
-    def __add__(self, other):
-        return Vector(*[a+b for a, b in zip(self, other)])
-
-    def __sub__(self, other):
-        return Vector(*[a-b for a, b in zip(self, other)])
-
-    def __floordiv__(self, other):
-        if isinstance(other, (int, float)):
-            return Vector(*[a//other for a in self])
-        return Vector(*[a//b for a, b in zip(self, other)])
-
-    def __mul__(self, other):
-        if isinstance(other, (int, float)):
-            return Vector(*[a*other for a in self])
-        return Vector(*[a*b for a, b in zip(self, other)])
-
-    def __repr__(self):
-        return f"mauzr.gui.vector.Vector(*{self})"
-
-    def __reversed__(self):
-        return Vector(*reversed(self))
 
 
 class Point(tuple):
@@ -84,6 +59,8 @@ class BellMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        pygame.init()
+
         self.bell_sound = pygame.mixer.Sound("/usr/share/sounds/alarm.wav")
         self.bell_reset_task = self.after(10, self.bell_mute, [False])
         self.bell_maintain_task = self.every(3, self.maintain_bell).enable()
@@ -117,66 +94,34 @@ class BellMixin:
             self.bell_sound.play()
 
 
-class Window(BellMixin, Agent):
+class Window(BellMixin, Agent, PollMixin):
     """ A GUI window. """
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.cells = None
         self.cell_dimensions, self.cell_draw_dimensions = None, None
-        self.elements = []
+        self.surf = None
+        self.elements = set()
 
-        self.option("dimensions", r"struct\/!HH", "Window size in pixels")
-        self.option("cells", r"struct\/!HH", "Window size in cells")
+        self.option("dimensions", r"struct/!HH", "Window size in pixels")
+        self.option("cells", r"struct/BB", "Window size in cells")
         self.option("title", "str", "Window title")
-        self.option("fps", r"struct\/!H", "Refresh rate")
 
     @contextmanager
     def setup(self):
+        assert self.is_ready()
         # Setup pygame.
         pygame.init()
-        pygame.display.set_mode(self.dimensions)
         pygame.display.set_caption(self.title)
+        self.surf = pygame.display.set_mode(self.dimensions)
 
         # Prepare fields.
-        self.cells = Vector(self.cells)
-        self.cell_dimensions = Vector(self.dimensions) // self.cells
-        self.cell_draw_dimensions = self.cell_dimensions - [10, 10]
-
-        self.sched.main(self.loop)
+        self.cell_dimensions = [a // b for a, b
+                                in zip(self.dimensions, self.cells)]
 
         yield
-
-        self.sched.main(None)
-        pygame.quit()
-
-    def handle_events(self):
-        """ Handle pygame events. """
-
-        # Parse all events.
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # Inform elements when mouse if clicked
-                pos = pygame.mouse.get_pos()
-                [i.on_mouse(pos) for i in self.elements]
-            elif event.type == pygame.QUIT:
-                # Return on quit
-                pygame.quit()
-                return
-
-    def loop(self):
-        """ Perform the loop of pygame. """
-
-        while not self.sched.shutdown_event.is_set():
-            self.handle_events()
-
-            # Draw each tick
-            [i.draw() for i in self.elements]
-
-            pygame.display.flip()
-            pygame.time.wait(1000//self._fps)
 
     def layout(self, position, extent):
         """ Layout an element
@@ -188,5 +133,45 @@ class Window(BellMixin, Agent):
             tuple: Two vectors containing start and end position in pixels.
         """
 
-        return (self.cell_dimensions * position,
-                self.cell_draw_dimensions * extent)
+        cd = self.cell_dimensions
+
+        return  pygame.Rect([d*p+10 for d, p in zip(cd, position)],
+                            [d*(p+e)-20 for d, p, e
+                             in zip(cd, position, extent)])
+
+    def add_element(self, element):
+        """ Add a GUI element.
+
+        Args:
+            element (mauzr.gui.Element): Element to add.
+        """
+
+        self.elements.add(element)
+
+    def rm_element(self, element):
+        """ Add a GUI element.
+
+        Args:
+            element (mauzr.gui.Element): Element to add.
+        """
+
+        self.elements.discard(element)
+
+    def handle_events(self):
+        """ Handle pygame events. """
+
+        # Parse all events.
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # Inform elements when mouse if clicked
+                pos = pygame.mouse.get_pos()
+                [i.on_mouse(pos) for i in self.elements]
+
+    def poll(self):
+        """ Perform the loop of pygame. """
+
+        self.handle_events()
+
+        # Draw each tick
+        [i.draw() for i in self.elements]
+        pygame.display.flip()

@@ -1,5 +1,6 @@
 """ MQTT connection facilities. """
 
+import threading
 import socket
 import ssl
 import shelve
@@ -20,17 +21,20 @@ class QoSShelf:
 
     Args:
         shell (mauzr.shell.Shell): Shell instance.
+        log (logging.Logger): Logger to use.
         default_id (int): Next package ID to use if it is not set or invalid.
         factory (callable): Callable for shelf creation.
     """
 
-    def __init__(self, shell, default_id, factory=shelve.open):
+    def __init__(self, shell, log, default_id, factory=shelve.open):
+        self.log = log
         self.path = str(shell.args.data_path/"qos")
         self.default_id = default_id
         self.shelf = None
         interval = shell.args.sync_interval
         self.sync_task = shell.sched.every(interval, self.sync)
         self.factory = factory
+        self.all_sent_event = threading.Event()
 
     def sync(self):
         """ Sync this shelf. """
@@ -43,6 +47,7 @@ class QoSShelf:
         pkg_id = self.shelf["pkg_id"]
         self.shelf.clear()
         self.shelf["pkg_id"] = pkg_id
+        self.update_all_sent()
 
     def replay(self):
         """ Get all messages that were not confirmed.
@@ -73,14 +78,20 @@ class QoSShelf:
     def __enter__(self):
         """ Open and prepare shelf. """
 
+        assert self.shelf is None
+
         self.shelf = self.factory(self.path)
         self.shelf.setdefault("pkg_id", self.default_id)
+        self.update_all_sent()
+
         self.sync_task.enable()
         return self
 
     def __exit__(self, *exc_details):
         self.sync_task.disable()
-        self.shelf.close()
+        if self.shelf is not None:
+            self.shelf.close()
+            self.shelf = None
 
     def __setitem__(self, pkg_id, msg):
         """ Add a package to the shelf.
@@ -92,6 +103,15 @@ class QoSShelf:
 
         assert isinstance(pkg_id, int)
         self.shelf[str(pkg_id)] = msg
+        self.update_all_sent()
+
+    def update_all_sent(self):
+        """ Update the all sent event. """
+
+        if self.shelf is not None and len(self.shelf) != 1:
+            self.all_sent_event.clear()
+        else:
+            self.all_sent_event.set()
 
     def __getitem__(self, pkg_id):
         return self.shelf[str(pkg_id)]
@@ -104,30 +124,37 @@ class QoSShelf:
         """
 
         assert pkg_id != "pkg_id"
-        del self.shelf[str(pkg_id)]
+        try:
+            del self.shelf[str(pkg_id)]
+        except KeyError:
+            self.log.warning("Unknown package was confirmed: %s", pkg_id)
+        self.update_all_sent()
 
 
-def default_socket_factory(log, args):  # pragma: no cover
+def default_socket_factory(log, domain, ca, crt, key):  # pragma: no cover
     """ Create a factory for server connection info generators.
 
     Args:
         log (logging.Logger): Logger to use.
-        ca (str): CA file to use
+        domain (str): Domain to connect to.
+        ca (str): Certificate authority to use.
+        crt (str): Certificate file for the client.
+        key (str): Key file for the client.
     Returns:
         callable: Factory that returns a generrator for server connection info.\
                   The generator returns tuples containing hostname, port and \
                   CA for TLS.
     """
 
-    query = f"_secure-mqtt._tcp.{args.server}"
+    query = f"_secure-mqtt._tcp.{domain}"
 
     ctx = ssl.SSLContext()
-    ctx.load_verify_locations(cafile=args.ca)
-    ctx.load_cert_chain(certfile=args.cert, keyfile=args.key)
+    ctx.load_verify_locations(cafile=ca)
+    ctx.load_cert_chain(certfile=crt, keyfile=key)
     ctx.set_ciphers("HIGH")
     ctx.set_alpn_protocols(("mqtt/3.1.1",))
     ctx.verify_mode = ssl.CERT_REQUIRED
-    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    #ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.check_hostname = True
 
     def _new():
@@ -136,8 +163,12 @@ def default_socket_factory(log, args):  # pragma: no cover
                 host, port = str(record.target), record.port
                 # Open socket and perform handshake
                 log.debug("Opening Socket to %s:%s", host, port)
-                sock = socket.create_connection((host, port))
-                yield ctx.wrap_socket(sock)
+                try:
+                    sock = socket.create_connection((host, port))
+                    yield ctx.wrap_socket(sock, server_hostname=host.strip("."))
+                except (ValueError, OSError) as err:
+                    log.error("Establishing Connection failed: %s", err)
+                    yield None
     return _new
 
 
@@ -147,6 +178,7 @@ class Connector:
     Args:
         shell (mauzr.shell.Shell): Shell instance to use.
         socket_factory (callable): Factory for sockets.
+        shelf_factory (callable): Factory method for creating the QoS shelf.
     """
 
     def __init__(self, shell,
@@ -163,19 +195,20 @@ class Connector:
 
         # Setup fields.
         self.sched, self.sock = shell.sched, None  # Basics.
-        self.socket_factory = socket_factory(self.log, args.ca) # Socket factory.
+        self.socket_factory = socket_factory(self.log, args.domain,
+                                             args.ca, args.crt, args.key)()
         self.handles = weakref.WeakValueDictionary()  # Dict of topic handles.
         self.connection_listeners = []  # Listeners for connection changes.
-        self.subscribed_handles = set()  # Set of subscribed handles.
-        self.qos_shelf = shelf_factory(shell, 2)  # QoS storage.
+        self.qos_shelf = shelf_factory(shell, self.log, 2)  # QoS storage.
+
 
         # Prepare packages.
         will_args = {"will_topic": "status/" + args.name, "will_qos": 0,
                      "will_payload": b'\x00', "will_retain": True}
         self.disconnect_pkg = Disconnect(will_pkg_id=1, **will_args)
         self.connect_pkg = Connect(clean_session=False, keepalive=keepalive,
-                                    will_pkg_id=0, id=args.name,
-                                    **will_args)
+                                   will_pkg_id=0, client_id=args.name,
+                                   **will_args)
 
         # Required tasks-
         self.connect_task = sched.every(args.backoff, self.connect)
@@ -188,12 +221,8 @@ class Connector:
         return self
 
     def __exit__(self, *exc_details):  # pragma: no cover
-        # Disable all tasks.
-        self.timeout_task.disable()
-        self.ping_task.disable()
-        self.connect_task.disable()
-
-        self.disconnect()  # Ensure disconnected.
+        # Ensure disconnected.
+        self.disconnect(await_all_sent=True, reconnect=False)
         self.qos_shelf.__exit__(*exc_details)  # close shelf.
 
     def ping(self):  # pragma: no cover
@@ -207,10 +236,14 @@ class Connector:
             self.disconnect()
 
     def connect(self):  # pragma: no cover
+        """ Connect to the mqtt server. """
+
         # Perform connect.
         try:
             # Open socket and perform handshake
-            self.sock = self.socket_factory()
+            self.sock = next(self.socket_factory)
+            if self.sock is None:
+                return
             self._handshake()
 
             # Inform listeners.
@@ -224,7 +257,7 @@ class Connector:
             self.log.info("Connected")
         except OSError as err:
             self.log.warning("Connection failed: %s", str(err))
-            self.sock = None
+            self.disconnect()
 
     def _handshake(self):  # pragma: no cover
         """ Perform actual connect with the server. """
@@ -257,32 +290,55 @@ class Connector:
         self.log.debug("Ping response timed out")
         self.disconnect()
 
-    def disconnect(self):  # pragma: no cover
+    def disconnect(self,
+                   await_all_sent=False, reconnect=True):  # pragma: no cover
         """ Disconnect from server. """
-
-        # Set tasks.
-        self.ping_task.disable()
-        self.timeout_task.disable()
-        self.connect_task.enable()
-        self.sched.idle(time.sleep)
 
         if self.sock is None:
             # Already disconnected.
             return
 
+        if self.sock is not None and await_all_sent:
+            self.qos_shelf.all_sent_event.wait(3.0)
+
+        # Set tasks.
+        self.ping_task.disable()
+        self.timeout_task.disable()
+        if reconnect:
+            self.connect_task.enable()
+        else:
+            self.connect_task.disable()
+        self.sched.idle(time.sleep)
+
         self.log.debug("Disconnecting")
         try:
             # Send disconnect package.
             self.sock.send(self.disconnect_pkg)
-        except (OSError, ConnectionError):
-            self.log.warning("Disconnecting gracefully failed")
+        except OSError:
+            pass
         finally:
             # Close sockets
-            self.sock.close()
             self.sock = None
             self.log.warning("Disconnected")
             # Inform listeners.
             [cb(False) for cb in self.connection_listeners]
+
+    def publish_handle(self, handle, payload,
+                       disconnect_on_error=True):  # pragma: no cover
+        """ Publish a payload.
+
+        Args:
+            handle (Handle): Handle to publish on.
+            payload (bytes): Payload of the message.
+            disconnect_on_error (bool): Disconnect if this publish fails.
+        Returns:
+            Publish: The message that was sent.
+        Raises:
+            MQTTOfflineError: If not connected to a server.
+        """
+
+        return self.publish(handle.topic, payload, handle.qos,
+                            handle.retain, disconnect_on_error)
 
     def publish(self, topic, payload, qos,
                 retain, disconnect_on_error=True):  # pragma: no cover
@@ -315,23 +371,25 @@ class Connector:
 
         # Store message if QoS requires it.
         if msg.qos > 0:
-            self.qos_shelf[publish.pkg_id] = bytes(publish)
+            self.qos_shelf[msg.pkg_id] = bytes(msg)
+
+        if self.sock is None:
+            return False
 
         # Send message
         try:
             self.sock.send(msg)
-            return msg
+            return True
         except OSError:
-            self.log.warning("Publish failed")
             if disconnect_on_error:
                 self.disconnect()
-            raise MQTTOfflineError(message=msg)
+            return False
 
-    def unsubscribe(self, topic):  # pragma: no cover
+    def unsubscribe(self, handle):  # pragma: no cover
         """ Unsubscribe from a topic.
 
         Args:
-            topic (str): Topic to unsubscribe from.
+            handle (Handle): Handle to unsubscribe.
         Returns:
             int: Package ID used to unsubscribe.
         Raises:
@@ -346,8 +404,8 @@ class Connector:
         pkg_id = self.qos_shelf.new_pkg_id()
 
         # Create and send package.
-        self.log.debug("Unsubscribing %s with ID %s", topic, pkg_id)
-        msg = Unsubscribe(topic=topic, pkg_id=pkg_id)
+        self.log.debug("Unsubscribing %s with ID %s", handle.topic, pkg_id)
+        msg = Unsubscribe(topic=handle.topic, pkg_id=pkg_id)
         try:
             self.sock.send(msg)
         except OSError:
@@ -355,12 +413,11 @@ class Connector:
             raise MQTTOfflineError()
         return pkg_id
 
-    def subscribe(self, topic, qos):  # pragma: no cover
+    def subscribe(self, handle):  # pragma: no cover
         """ Subscribe to a topic.
 
         Args:
-            topic (str): Topic to subscribe to.
-            qos (int): QoS level to request.
+            handle (Handle): Handle to subscribe.
         Returns:
             int: Package ID used to subscribe.
         Raises:
@@ -372,12 +429,12 @@ class Connector:
             raise MQTTOfflineError()
 
         # Get Package ID
-        assert 0 <= qos <= 2
+        assert 0 <= handle.qos <= 2
         pkg_id = self.qos_shelf.new_pkg_id()
 
         # Create package and send it.
-        self.log.debug("Subscribing %s with ID %s", topic, pkg_id)
-        sub = Subscribe(topic=topic, qos=qos, pkg_id=pkg_id)
+        self.log.debug("Subscribing %s with ID %s", handle.topic, pkg_id)
+        sub = Subscribe(topic=handle.topic, qos=handle.qos, pkg_id=pkg_id)
         try:
             self.sock.send(sub)
         except OSError:
@@ -397,13 +454,17 @@ class Connector:
         """
 
         # Read one byte for the specified duration.
-        self.sock.settimeout(duration)
         try:
-            op = self.sock.recv(1)[0]
-        except OSError:
-            return
-        finally:
+            self.sock.settimeout(duration)
+            try:
+                op = self.sock.recv(1)[0]
+            except (OSError, IndexError):
+                return
             self.sock.settimeout(False)
+        except OSError:
+            self.disconnect()
+            return
+
 
         # Reset timeout.
         self.timeout_task.enable()
@@ -418,29 +479,29 @@ class Connector:
         elif PubRec.TYPE == op:
             # Convert PUBREC to PUBREL and send it out.
             rec = PubRec(sock, op)
-            shelf[rec.id] = rec
-            sock.send(PubRel(id=rec.id))
-            log.debug("Outgoing publish %s received", rec.id)
+            shelf[rec.pkg_id] = rec
+            sock.send(PubRel(id=rec.pkg_id))
+            log.debug("Outgoing publish %s received", rec.pkg_id)
         elif PubComp.TYPE == op:
             # Clear QoS shelf.
             comp = PubComp(sock, op)
-            del shelf[comp.id]
-            log.debug("Outgoing publish %s completed", comp.id)
+            del shelf[comp.pkg_id]
+            log.debug("Outgoing publish %s completed", comp.pkg_id)
         elif PubAck.TYPE == op:
-            pkg_id = PubAck(sock, op).id
+            pkg_id = PubAck(sock, op).pkg_id
             # Clear QoS shelf.
             del shelf[pkg_id]
             log.debug("Outgoing publish %s acknowledged", pkg_id)
         elif UnsubAck.TYPE == op:
             unsuback = UnsubAck(sock, op)
             # Inform all subscribed handles about unsub.
-            [h.on_unsub(unsuback.id) for h in self.subscribed_handles]
-            log.debug("Unsub %s acknowledged", unsuback.id)
+            [h.on_unsub(unsuback.pkg_id) for h in self.handles.values()]
+            log.debug("Unsub %s acknowledged", unsuback.pkg_id)
         elif SubAck.TYPE == op:
             suback = SubAck(sock, op)
             # Inform all subscribed handles about sub.
-            [h.on_sub(suback.id) for h in self.subscribed_handles]
-            log.debug("Sub %s acknowledged", suback.id)
+            [h.on_sub(suback.pkg_id) for h in self.handles.values()]
+            log.debug("Sub %s acknowledged", suback.pkg_id)
         elif PubRel.TYPE == op:
             self._handle_incoming_publish_release(op)
         elif Publish.TYPE == op & 0xf0:
@@ -462,7 +523,7 @@ class Connector:
                        p.topic, rel.id)
         # Find responsible handles and notify them about the publish
         ch = p.topic.split("/")
-        for h in [h for h in self.subscribed_handles if ch in h]:
+        for h in [h for h in self.handles.values() if ch in h]:
             h.on_publish(p.topic, p.payload, p.retained, p.duplicate)
         # Send PubComp
         self.sock.send(PubComp(rel.id))
@@ -479,15 +540,17 @@ class Connector:
         p = Publish(self.sock, op)
 
         if p.qos == 2:
-            self.log.debug("Storing publish for %s with ID %s", p.topic, p.id)
+            self.log.debug("Storing publish for %s with ID %s",
+                           p.topic, p.pkg_id)
             self.qos_shelf[p.id] = p
             self.sock.send(p.rec)
             return
 
-        self.log.debug("Received publish for %s with ID %s", p.topic, p.id)
+        self.log.debug("Received publish for %s with ID %s", p.topic, p.pkg_id)
         # Find responsible handles and notify them about the publish
         ch = p.topic.split("/")
-        for h in [h for h in self.subscribed_handles if ch in h]:
+
+        for h in [h for h in self.handles.values() if ch in h]:
             h.on_publish(p.topic, p.payload, p.retained, p.duplicate)
 
         if p.qos == 1:
@@ -509,5 +572,8 @@ class Connector:
             return Handle(self, self.sched, topic=topic,
                           ser=ser, qos=qos, retain=retain)
         h = self.handles[topic]
-        assert h.qos == qos and h.retain == retain and h.ser == ser
+        assert h.topic == topic
+        assert h.qos == qos and h.retain == retain and h.ser == ser, \
+               f"Conflicting configuration for topic {topic}: qos {h.qos} "\
+               f"- {qos}, retain {h.retain} - {retain}, ser {h.ser} - {ser}"
         return h

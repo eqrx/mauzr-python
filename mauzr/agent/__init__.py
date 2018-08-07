@@ -3,7 +3,7 @@
 import enum
 import re
 from contextlib import contextmanager, ExitStack
-from mauzr.serializer import Serializer, Struct, Topic
+from mauzr.serializer import Serializer, Struct, Topic, String
 
 __author__ = "Alexander Sowitzki"
 
@@ -43,17 +43,19 @@ class Agent:
     def __init__(self, shell, name):
         self.shell, self.name, self.sched = shell, name, shell.sched
 
-
         cfg_topic = f"cfg/{shell.name}/{name}"
-        cfg_handle = shell.mqtt(topic=cfg_topic, ser=None, qos=1, retain=True)
+        assert name != "+"
+        cfg_handle = shell.mqtt(topic=cfg_topic, qos=1, retain=True,
+                                ser=String(shell=shell,
+                                           desc="Configuration entries"))
         self.cfg_handle = cfg_handle
 
         status_topic = f"status/{shell.name}/{name}"
-        status_ser = Struct("B", "Is this agent active")
+        status_ser = Struct(shell=shell, fmt="B", desc="Is this agent active")
         self.status_handle = shell.mqtt(topic=status_topic, qos=1, retain=True,
                                         ser=status_ser)
 
-        self.__options = {}
+        self.options = {}
         self.__contexts = []
         self.__inputs = {}
         self.__input_subs = {}
@@ -74,12 +76,11 @@ class Agent:
         # Make log level of agent an option.
         self.option("log_level", "str", "Log level of the agent",
                     cb=lambda l: self.log.setLevel(l.upper()),
-                    restart=False)
+                    restart=False, default="info")
 
         super().__init__()
 
-    @property
-    def ready(self):
+    def is_ready(self):
         """ True if agent is ready to be activated. """
 
         # If no missing topics are present the agent is ready.
@@ -89,7 +90,7 @@ class Agent:
         """ Map agent options to object attributes. """
 
         try:
-            return self.__options[name]
+            return self.options[name]
         except KeyError:
             raise AttributeError
 
@@ -98,9 +99,8 @@ class Agent:
 
         assert not self.active
 
-        if not self.ready:
+        if not self.is_ready():
             raise RuntimeError("Agent not ready")
-
 
         [self.__stack.enter_context(c()) for c in self.__contexts]
 
@@ -119,30 +119,6 @@ class Agent:
         self.__input_subs.clear()
         self.active = False
         self.status_handle(False)
-
-    @contextmanager
-    def __option_context(self, handle, restart):
-        """ Context for the case that a message on a topic arrives.
-
-        Topic will be removed from the missing list.
-        Depending on the configuration the agent is restartet.
-
-        Args:
-            handle (mauzr.mqtt.Handle): Handle to manage.
-            restart (bool): If True the agent is stopped before configuration \
-            and restarted afterwards.
-        Yields:
-            None: To let the option be configured.
-        """
-
-        # Stop agent if it was active and restart was configured.
-        if restart:
-            self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
-
-        yield  # Perform confguration.
-
-        # Got message on topic, not missing anymore.
-        self.__rm_missing_input(handle)
 
     def discard(self):
         """ Call to destroy the agent. """
@@ -172,6 +148,7 @@ class Agent:
                 self.log.exception("Unhandled error occured")
                 # Restart agent on error.
                 self.shell.agent_changed(self, AgentEvent.WANTS_RESTART)
+                raise
         return _guard
 
     def __add_missing_input(self, handle):
@@ -181,17 +158,24 @@ class Agent:
             handle (mauzr.mqtt.Handle): Handle to register.
         """
 
+        assert handle.topic.startswith("cfg/"), f"Invalid topic: {handle.topic}"
+
         # Report shell that this agent is not ready to run anymore.
-        if self.ready:
+        if self.is_ready():
             self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
 
         self.__missing_inputs.add(handle)  # Add to missing list.
+        self.log.info("Missing options are %s",
+                      [h.topic for h in self.__missing_inputs])
 
     def __rm_missing_input(self, handle):
+        assert handle.topic.startswith("cfg/"), f"Invalid topic: {handle.topic}"
         self.__missing_inputs.discard(handle)
 
-        if self.ready:
+        if self.is_ready():
             self.shell.agent_changed(self, AgentEvent.WANTS_ACTIVATION)
+        self.log.info("Missing options are %s",
+                      [h.topic for h in self.__missing_inputs])
 
     def add_context(self, context):
         """ Add a context that is entered and exited by the agent.
@@ -237,7 +221,7 @@ class Agent:
         return self.sched.after(delay, self.guard_error(cb), *args, **kwargs)
 
     def option(self, name, fmt, desc,
-               ser=None, cb=None, attr=None, restart=True):
+               ser=None, cb=None, attr=None, restart=True, default=None):
         """ Setup an option for this agent.
 
         Args:
@@ -248,22 +232,37 @@ class Agent:
             cb (callback): Callback that is called when the option changes.
             attr (str): Attribute name of resulting field.
             restart (bool): Restart agent if option changes.
+            default (object): Default value to assume for this option.
         """
 
 
         if ser is None:
-            ser = Serializer.from_well_known(fmt, desc)
+            ser = Serializer.from_well_known(shell=self.shell,
+                                             fmt=fmt, desc=desc)
         if attr is None:
             attr = name
         handle = self.cfg_handle.child(topic=name, ser=ser, qos=1, retain=True)
-        self.__add_missing_input(handle)
+
         def _cb(value):
-            with self.__option_context(handle, restart):
-                self.__options[attr] = value  # Simply set value.
-                self.log.error(cb)
-                if cb is not None:
-                    self.guard_error(cb)(value)
-        self.__cfg_subs[name] = handle.sub(self.guard_error(_cb))
+
+            # Stop agent if it was active and restart was configured.
+            if restart:
+                self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
+
+            assert value is not None
+
+            self.options[attr] = value  # Simply set value.
+            # Got message on topic, not missing anymore.
+            self.__rm_missing_input(handle)
+            if cb is not None:
+                self.guard_error(cb)(value)
+
+        self.__cfg_subs[name] = handle.sub(_cb)
+        self.__add_missing_input(handle)
+
+        if default is not None:
+            _cb(default)
+            self.__rm_missing_input(handle)
 
     def input_topic(self, name, regex, desc, ser=None,
                     cb=None, restart=True, sub=None):
@@ -292,8 +291,14 @@ class Agent:
             if ser is not None:
                 handle.change_ser(ser)
 
-            with self.__option_context(cfg_handle, restart):
-                self.static_input(handle, cb, sub)
+            # Stop agent if it was active and restart was configured.
+            if restart:
+                self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
+
+            self.static_input(handle, cb, sub)
+
+            # Got message on topic, not missing anymore.
+            self.__rm_missing_input(cfg_handle)
 
         self.__add_missing_input(cfg_handle)  # Add source to missing topics
         guarded_cb = self.guard_error(_source_cb)
@@ -358,8 +363,14 @@ class Agent:
             if ser is not None:
                 handle.change_ser(ser)
 
-            with self.__option_context(cfg_handle, restart):
-                self.__options[attr] = handle
+            # Stop agent if it was active and restart was configured.
+            if restart:
+                self.shell.agent_changed(self, AgentEvent.WANTS_DEACTIVATION)
+
+            self.options[attr] = handle
+
+            # Got message on topic, not missing anymore.
+            self.__rm_missing_input(cfg_handle)
 
         self.__add_missing_input(cfg_handle)  # Add source to missing topics
         guarded_cb = self.guard_error(_source_cb)

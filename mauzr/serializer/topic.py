@@ -3,8 +3,6 @@
 import json
 from .base import Serializer, SerializationError
 
-# TODO use SerializationError
-
 __author__ = "Alexander Sowitzki"
 
 class Topic(Serializer):
@@ -17,10 +15,6 @@ class Topic(Serializer):
 
     fmt = "topic"
 
-    def __init__(self, shell, desc):
-        super().__init__(desc)
-        self.shell = shell
-
     @staticmethod
     def pack(h):
         """ Pack topic handle into JSON string.
@@ -29,11 +23,16 @@ class Topic(Serializer):
             h (mauzr.mqtt.Handle): Handle to serialize.
         Returns:
             bytes: Serialized topic information as JSON string.
+        Raises:
+            SerializationError: On error.
         """
 
         if h is None:
             return bytes()
-
+        if isinstance(h, dict):
+            if set(("topic", "qos", "retain", "fmt")).issubset(set(h.keys())):
+                return json.dumps(h).encode()
+            raise SerializationError(f"Invalid topic information: {h}")
         return json.dumps({"topic": h.topic, "qos": h.qos,
                            "retain": h.retain, "fmt": h.ser.fmt}).encode()
 
@@ -52,7 +51,8 @@ class Topic(Serializer):
             j = json.loads(data.decode())
         except json.JSONDecodeError as err:
             raise SerializationError(err)
-        ser = self.from_well_known(j["fmt"], self.desc)
+        ser = self.from_well_known(shell=self.shell,
+                                   fmt=j["fmt"], desc=self.desc)
         return self.shell.mqtt(topic=j["topic"], ser=ser,
                                qos=j["qos"], retain=j["retain"])
 
@@ -65,10 +65,6 @@ class Topics(Serializer):
     """
 
     fmt = "topics"
-
-    def __init__(self, shell, desc):
-        super().__init__(desc)
-        self.shell = shell
 
     @staticmethod
     def pack(handles):
@@ -105,5 +101,7 @@ class Topics(Serializer):
             raise SerializationError(err)
 
         return [self.shell.mqtt(topic=i["topic"],
-                                ser=self.from_well_known(i["fmt"], self.desc),
+                                ser=self.from_well_known(shell=self.shell,
+                                                         fmt=i["fmt"],
+                                                         desc=self.desc),
                                 qos=i["qos"], retain=i["retain"]) for i in j]

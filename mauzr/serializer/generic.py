@@ -30,7 +30,7 @@ class String(Serializer):
 
         if string is None:
             return bytes()
-        elif not isinstance(string, str):
+        if not isinstance(string, str):
             raise SerializationError(f"Not a string: {string}")
 
         return string.encode()
@@ -48,20 +48,69 @@ class String(Serializer):
         return data.decode()
 
 
+class Bytes(Serializer):
+    """ Serializer for an arbitrary amount of bytes.
+
+    Args:
+        desc (str): Description of handled string.
+    """
+
+    fmt = None
+
+    @staticmethod
+    def pack(data):
+        """ Pack bytes.
+
+        Args:
+            data (bytes): Bytes or list of ints to pack.
+        Returns:
+            bytes: Same bytes, new object.
+        Raises:
+            SerializationError: On error.
+        """
+
+        if data is None:
+            return bytes()
+
+        try:
+            return bytes(data)
+        except ValueError as err:
+            raise SerializationError(err)
+
+
+    @staticmethod
+    def unpack(data):
+        """ Unpack bytes.
+
+        Args:
+            data (bytes): Bytes to unpack
+        Returns:
+            str: Same bytes, new object.
+        Raises:
+            SerializationError: On error.
+        """
+
+        try:
+            return bytes(data)
+        except ValueError as err:
+            raise SerializationError(err)
+
+
 class Struct(Serializer):
     """ Serializer using struct module.
 
     Args:
+        shell (mauzr.shell.Shell): Shell to use.
         fmt (str): Format used for struct module.
         desc (str): Description of handled information.
     """
 
     fmt = "struct/" # Default format without struct format.
 
-    def __init__(self, fmt, desc):
-        super().__init__(desc)
+    def __init__(self, shell, fmt, desc):
+        super().__init__(shell=shell, desc=desc)
         if struct.calcsize(fmt) == 0:
-            raise ValueError("Invalid format")
+            raise ValueError(f"Invalid format: {fmt}")
 
         self.fmt = "struct/{}".format(fmt)  # Concat serializer and struct info.
         self.struct_fmt = fmt
@@ -105,10 +154,11 @@ class Struct(Serializer):
         return obj[0] if self.simple_type else obj
 
     @classmethod
-    def from_fmt(cls, fmt, desc=None):
+    def from_fmt(cls, shell, fmt, desc=None):
         """ Instantiate struct serializer from format.
 
         Args:
+            shell (mauzr.shell.Shell): Shell to use.
             fmt (str): Format ("struct/" with field suffix) to create from.
             desc (str): Description of information to handle. May be None.
         Returns:
@@ -118,8 +168,8 @@ class Struct(Serializer):
         """
 
         if not isinstance(fmt, str) or not fmt.startswith(cls.fmt):
-            raise ValueError("Invalid format")
-        return cls(fmt=fmt.split("/")[1], desc=desc)
+            raise ValueError(f"Invalid format: {fmt}")
+        return cls(shell=shell, fmt=fmt.split("/")[1], desc=desc)
 
 
 class JSON(Serializer):
@@ -160,6 +210,7 @@ class IntEnum(Struct):
     """ Serialize enum.IntEnum using the struct module.
 
     Args:
+        shell (mauzr.shell.Shell): Shell to use.
         enum_cls (enum.IntEnum): The enum to serialize.
         enum_fmt (str): Format given to struct module to pack the enum value.
         desc (str): Description of handled enum.
@@ -167,8 +218,8 @@ class IntEnum(Struct):
 
     fmt = None
 
-    def __init__(self, enum_cls, enum_fmt, desc):
-        Struct.__init__(self, enum_fmt, desc)
+    def __init__(self, shell, enum_cls, enum_fmt, desc):
+        super().__init__(shell=shell, fmt=enum_fmt, desc=desc)
         self.enum_cls = enum_cls
 
     def pack(self, enm):
@@ -223,7 +274,12 @@ class Eval(String):
             data(bytes): Packed string.
         Returns:
             object: Return value of eval.
+        Raises:
+            SerializationError: On error.
         """
 
-        # pylint: disable=eval-used
-        return eval(String.unpack(data))
+        try:
+            # pylint: disable=eval-used
+            return eval(String.unpack(data))
+        except SyntaxError:
+            raise SerializationError(f"Invalid statement: {data}")

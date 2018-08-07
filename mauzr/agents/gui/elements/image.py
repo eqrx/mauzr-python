@@ -14,7 +14,8 @@ class FeedDisplayer(Element):
         super().__init__(*args, **kwargs)
 
         self.input_topic("feed", r"image", "Feed image",
-                         ser=PygameSurface("Feed display"))
+                         ser=PygameSurface(shell=self.shell,
+                                           desc="Feed display"))
         self.feed_surf, self.feed_rect = None, None
 
     def on_input(self, surface):

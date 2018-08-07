@@ -85,7 +85,7 @@ class HighDriver(Agent):
 
         if channels[0] > 65000 or channels[1] > 65000:
             # Sensor is oversaturated. Publish infinity.
-            # TODO: What is the real saturation point?
+            # What is the real saturation point?
             self.log.warning("Sensor oversaturated. Publishing infinity")
             self.output(float("inf"))
             return

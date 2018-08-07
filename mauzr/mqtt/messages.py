@@ -59,8 +59,7 @@ class Connect(Message):  # pragma: no cover
     - will_retain (bool): Will retainment flag.
     - clean_session (bool): Request clean session.
     - keepalive (int): Requested keepalive time.
-    - user (str): User login name. Also used for client id.
-    - passwd (str): User password
+    - client_id (str): Client ID.
     """
 
     TYPE = 0x10
@@ -68,18 +67,21 @@ class Connect(Message):  # pragma: no cover
     def __init__(self, **kwargs):
         k = kwargs
         assert 0 <= k["will_qos"] <= 2
-        cl_id, tp = k["id"].encode(), k["will_topic"].encode()
+        cl_id, tp = k["client_id"].encode(), k["will_topic"].encode()
         pay = k["will_payload"]
-        length = 10 + len(cl_id) + len(tp) + len(pay) + 5 * 2
+        length = 10 + len(cl_id) + len(tp) + len(pay) + 2 * 3
         msg = bytearray(b"\x10" + self.pack_length(length))
         msg.extend(pack(">H4sB", 4, b"MQTT", 4))
 
         msg.append(k["will_retain"] << 5 | k["will_qos"] << 3 | True << 2 |
                    k["clean_session"] << 1)
         msg.extend(pack(">H", k["keepalive"]))
-        for field in (cl_id, tp, pay):
-            msg.extend(pack(">H", len(field)) + field)
-        return super().__init__(msg, **kwargs)
+
+        msg.extend(pack(">H", len(cl_id)) + cl_id)
+        msg.extend(pack(">H", len(tp)) + tp)
+        msg.extend(pack(">H", len(pay)) + pay)
+
+        super().__init__(msg, **kwargs)
 
 
 class ConnAck(Message):  # pragma: no cover
@@ -97,7 +99,7 @@ class ConnAck(Message):  # pragma: no cover
         flags, ret_code = sock.recv(2)
         if ret_code != 0:
             raise OSError(f"Connection error: {ret_code}")
-        return super().__init__(session_cleared=flags & 1)
+        super().__init__(session_cleared=flags & 1)
 
 class Publish(Message):  # pragma: no cover
     """ Publish message. May be sent from broker and client.
@@ -105,7 +107,7 @@ class Publish(Message):  # pragma: no cover
 
     Attributes and constructor arguments:
     - topic (bool): Topic of the publish.
-    - id (id): Publish ID.
+    - pkg_id (str): Publish ID.
     - payload (bytes): Publish payload.
     - qos (bool): QoS of the publish.
     - retain (bool): When sent to the broker this indicates if the message \
@@ -134,40 +136,41 @@ class Publish(Message):  # pragma: no cover
                     break
                 sh += 7
 
-            topic_len = unpack(">H", sock.recv(2))
+            topic_len = unpack(">H", sock.recv(2))[0]
             buf -= topic_len + 2
             info = {"topic": sock.recv(topic_len).decode(),
-                    "id": None, "ack": None,
+                    "pkg_id": None, "ack": None,
                     "qos": (op & 6) >> 1, "duplicate": op & 8,
                     "retained": op & 1}
 
             if info["qos"]:
-                info["id"] = unpack(">H", sock.recv(2))
+                info["pkg_id"] = unpack(">H", sock.recv(2))[0]
                 if info["qos"] == 1:
-                    info["ack"] = PubAck(id=info["id"])
+                    info["ack"] = PubAck(pkg_id=info["pkg_id"])
                 else:
-                    info["rec"] = PubRec(id=info["id"])
+                    info["rec"] = PubRec(pkg_id=info["pkg_id"])
                 buf -= 2
             info["payload"] = sock.recv(buf)
-            return super().__new__(**info)
-        k = kwargs
-        topic = k["topic"].encode()
-        msg = bytearray([self.TYPE | k.get("duplicate", False) << 3 |
-                         k["qos"] << 1 | k["retain"]])
-        length = 2 + len(topic) + len(k["payload"]) + bool(k["qos"]) * 2
-        msg.extend(self.pack_length(length))
-        msg.extend(pack(">H", len(topic)) + topic)
-        if k["qos"]:
-            msg.extend(pack(">H", k["id"]))
-        msg.extend(k["payload"])
-        return super().__init__(msg, **kwargs)
+            super().__init__(**info)
+        else:
+            k = kwargs
+            topic = k["topic"].encode()
+            msg = bytearray([self.TYPE | k.get("duplicate", False) << 3 |
+                             k["qos"] << 1 | k["retain"]])
+            length = 2 + len(topic) + len(k["payload"]) + bool(k["qos"]) * 2
+            msg.extend(self.pack_length(length))
+            msg.extend(pack(">H", len(topic)) + topic)
+            if k["qos"]:
+                msg.extend(pack(">H", k["pkg_id"]))
+            msg.extend(k["payload"])
+            super().__init__(msg, **kwargs)
 
 
 class Subscribe(Message):  # pragma: no cover
     """ Subscribe to a topic.
 
     Arguments for the constructor are:
-    - id (int): ID of the subscription message.
+    - pkg_id (int): ID of the subscription message.
     - topic (str): Topic to subscribe to.
     - qos (int): QoS to subscribe with.
     """
@@ -175,7 +178,7 @@ class Subscribe(Message):  # pragma: no cover
     TYPE = 0x82
 
     def __init__(self, **kwargs):
-        topic, qos, pkg_id = kwargs["topic"], kwargs["qos"], kwargs["id"]
+        topic, qos, pkg_id = kwargs["topic"], kwargs["qos"], kwargs["pkg_id"]
         assert 0 <= qos <= 1
         topic = topic.encode()
 
@@ -183,14 +186,14 @@ class Subscribe(Message):  # pragma: no cover
         msg.extend(self.pack_length(2 + 2 + len(topic) + 1))
         msg.extend(pack(">HH", pkg_id, len(topic)) + topic)
         msg.append(qos)
-        return super().__init__(msg, **kwargs)
+        super().__init__(msg, **kwargs)
 
 
 class SubAck(Message):  # pragma: no cover
     """ Broker acknowleges a subscription.
 
     Attributes are:
-    - id (int): ID of the subscription.
+    - pkg_id (int): ID of the subscription.
     """
 
     TYPE = 0x90
@@ -204,14 +207,14 @@ class SubAck(Message):  # pragma: no cover
         qos = sock.recv(1)[0]
         if qos not in (0, 1, 2):
             raise OSError(f"Subscription {sub_id} failed")
-        return super().__init__(qos=qos, id=sub_id)
+        super().__init__(qos=qos, pkg_id=sub_id)
 
 
 class Unsubscribe(Message):  # pragma: no cover
     """ Unsubscribe from a topic
 
     Arguments for the constructor are:
-    - id (int): ID of the unsubscription message.
+    - pkg_id (int): ID of the unsubscription message.
     - topic (str): Topic to unsubscribe from.
     """
 
@@ -221,9 +224,9 @@ class Unsubscribe(Message):  # pragma: no cover
         k, msg = kwargs, bytearray([self.TYPE])
         topic = kwargs["topic"].encode()
         msg.extend(self.pack_length(2 + 2 + len(topic)))
-        msg.extend(pack(">H", k["id"]))
+        msg.extend(pack(">H", k["pkg_id"]))
         msg.extend(pack(">H", len(topic)) + topic)
-        return super().__init__(msg, **kwargs)
+        super().__init__(msg, **kwargs)
 
 
 class PingReq(Message):  # pragma: no cover
@@ -232,7 +235,7 @@ class PingReq(Message):  # pragma: no cover
     TYPE = 0xc0
 
     def __init__(self):
-        return super().__init__([self.TYPE, 0])
+        super().__init__([self.TYPE, 0])
 
 
 class PingResp(Message):  # pragma: no cover
@@ -243,7 +246,7 @@ class PingResp(Message):  # pragma: no cover
     def __init__(self, sock, op):
         if op != self.TYPE or sock.recv(1)[0] != 0:
             raise OSError("Invalid PingResp Message")
-        return super().__init__()
+        super().__init__()
 
 
 class Disconnect(Message):  # pragma: no cover
@@ -266,14 +269,14 @@ class Disconnect(Message):  # pragma: no cover
                            qos=k["will_qos"], retain=k["will_retain"],
                            id=k["will_pkg_id"]))
         msg.extend(bytes([self.TYPE, 0]))
-        return super().__init__(msg, **kwargs)
+        super().__init__(msg, **kwargs)
 
 
 class IDMessage(Message):  # pragma: no cover
     """ Base class for messages that only hold a package ID.
 
     Attributes are:
-    - id (int): ID of the package.
+    - pkg_id (int): ID of the package.
     """
 
     def __init__(self, *args, **kwargs):
@@ -281,15 +284,16 @@ class IDMessage(Message):  # pragma: no cover
             sock, op = args
             if op != self.TYPE or sock.recv(1)[0] != 2:
                 raise OSError("Invalid message")
-            return super().__new__(id=unpack(">H", sock.recv(2))[0])
-        return super().__init__(pack(">BBH", self.TYPE, 2, kwargs["id"]))
+            super().__init__(pkg_id=unpack(">H", sock.recv(2))[0])
+        else:
+            super().__init__(pack(">BBH", self.TYPE, 2, kwargs["pkg_id"]))
 
 
 class UnsubAck(Message):  # pragma: no cover
     """ Broker acknowleges an unsubscription.
 
     Attributes are:
-    - id (int): ID of the unsubscription.
+    - pkg_id (int): ID of the unsubscription.
     """
 
     TYPE = 0xb0
@@ -298,7 +302,7 @@ class UnsubAck(Message):  # pragma: no cover
         if op != self.TYPE or sock.recv(1)[0] != 2:
             raise OSError("Invalid UnsubAck message")
         pkg_id = unpack(">H", sock.recv(2))[0]
-        return super().__init__(id=pkg_id)
+        super().__init__(pkg_id=pkg_id)
 
 
 class PubRec(IDMessage):  # pragma: no cover

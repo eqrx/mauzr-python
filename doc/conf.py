@@ -1,3 +1,7 @@
+""" Sphinx configuration. """
+
+# pylint: disable=invalid-name
+
 # -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
@@ -22,7 +26,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'mauzr'
-copyright = '2018, Alexander Sowitzki'
+copyright = '2018, Alexander Sowitzki'  # pylint: disable=redefined-builtin
 author = 'Alexander Sowitzki'
 
 # The short X.Y version

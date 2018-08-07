@@ -34,7 +34,8 @@ class HighDriver(Agent):
         self.output_topic("output", r"struct\/!16H", "")
         for i in range(16):
             self.input_topic(f"input_{i}", r"struct\/!f",
-                             f"Setting for PWM {i}", sub={"handle": True})
+                             f"Setting for PWM {i}",
+                             sub={"wants_handle": True})
 
         self._values = [0.0] * 16
 

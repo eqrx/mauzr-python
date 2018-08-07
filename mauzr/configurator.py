@@ -5,95 +5,131 @@ Takes a YAML file that contains the network description and publishes
 it in the config tree of the local MQTT broker.
 """
 
-# TODO: Publish format for intermediate topics..
-
-import struct
 import logging
+import threading
+import time
 import argparse
-import pathlib
-import json
+from pathlib import Path
+from collections import Mapping
 import yaml
+from mauzr.serializer.generic import Serializer, Bytes
 from mauzr.shell import Shell
 
-def struct_factory(loader, suffix, node):
-    """ Pack struct data into bytes. """
-    return struct.pack(suffix, loader.construct_sequence(node))
+__author__ = "Alexander Sowitzki"
 
-def json_factory(loader, node):
-    """ Pack JSON data into bytes. """
-    return json.dumps(loader.construct_mapping(node))
-
-def topic_list_factory(loader, node):
-    """ Pack topic data into bytes. """
-    topics = [loader.construct_mapping(sn) for sn in node.value]
-    return json.dumps(topics)
-
-class Configurator:
-    """ Configurator main class.
+def whipe(shell, log):
+    """ Whipe present cfg, fmt and desc trees.
 
     Args:
-        shell (mauzr.shell.Shell): Shell to use.
+        shell (Shell): Shell to use.
+        log (logging.Logger): Logger to use.
     """
 
-    def __init__(self, shell):
-        # Get required data from shell.
-        self._core = shell
-        self._mqtt = shell.mqtt
-        self._path = shell.args.path
+    log.info("Begin whiping cfg tree")
 
-        # Add listener for MQTT connection.
-        self._mqtt.connection_listeners.append(self._on_connection)
-        # Create task for configuration.
-        self._cfg_task = shell.sched.after(0, self._run)
+    ser = Bytes(shell=shell, desc="None")
+    handles = []
 
-    def _on_connection(self, status):
-        # Start configuration task on first connection.
-        if status and not self._cfg_task:
-            self._cfg_task.enable()
+    def _whipe_cb(_value, handle):
+        handles.append(handle)
 
-    def _publish(self, topic, payload):
-        # Get handle for topic.
-        h = self._mqtt(topic="/".join(topic), qos=0, retain=True, ser=None)
-        if isinstance(payload, str):
-            # Convert string to bytes.
-            payload = payload.encode()
-        # Let handle publish payload.
-        h(payload)
-        h.publish_meta()
+    tokens = [shell.mqtt(topic=f"{branch}/#", ser=ser, qos=1,
+                         retain=True).sub(_whipe_cb, wants_handle=True)
+              for branch in ("cfg", "fmt", "desc")]
+    time.sleep(3)
+    del tokens
+    for h in handles:
+        log.info("Whiping %s", h.topic)
+        h(bytes())
+    log.info("Done whiping cfg tree")
 
-    def _walk_tree(self, path, entry):
-        if "CONTENT" in entry:
-            self._publish(path, entry["CONTENT"])
-            del entry["CONTENT"]
-        for key, value in entry.items():
-            sub_path = path + [key]
-            if isinstance(value, (bytes, str)):
-                self._publish(sub_path, value)
-            else:
-                self._walk_tree(sub_path, value)
+def process_topics(shell, log, topic_data):
+    """ Publish meta of created topics.
 
-    def _run(self):
-        config = yaml.load(self._path.open("r"))  # Load config.
-        self._walk_tree(["cfg"], config["cfg"])  # Walk through config.
-        self._core.sched.shutdown()  # Shut down core.
+    Args:
+        shell (Shell): Shell to use.
+        log (logging.Logger): Logger to use.
+        topic_data (tuple): Tuple of the created topics.
+    """
+
+    log.info("Begin publishing topic metadata")
+    for td in topic_data:
+        ser = Serializer.from_well_known(shell=shell,
+                                         fmt=td["fmt"], desc=td["desc"])
+        handle = shell.mqtt(topic=td["topic"], qos=td["qos"],
+                            retain=td["retain"], ser=ser)
+        log.info("Publishing meta for %s", handle.topic)
+        handle.publish_meta(configured=True)
+    log.info("Done publishing topic metadata")
+
+def process_cfg(shell, log, data, offset):
+    """ Publish meta of created topics.
+
+    Args:
+        shell (Shell): Shell to use.
+        log (logging.Logger): Logger to use.
+        data (dict): Configuration of the current level.
+        offset (list): Key path to this dict.
+    Raises:
+        ValueError: On error.
+    """
+
+    if not isinstance(data, Mapping):
+        return
+
+    special = frozenset(("_value",))
+    keys = frozenset(data.keys())
+    topic = "/".join(offset)
+
+    if "_value" in keys:
+        value, fmt, desc = data["_value"]
+        ser = Serializer.from_well_known(shell=shell, fmt=fmt, desc=desc)
+        h = shell.mqtt(topic=topic, ser=ser, qos=1, retain=True)
+        h.publish_meta(configured=True)
+        h(value)
+        log.info("%s -> %s", h.topic, value)
+    elif not keys - special:
+        raise ValueError(f"Topic contains no children or value: {topic}")
+
+    for key in keys - special:
+        process_cfg(shell, log, data[key], offset + [key])
+
+def run(shell):
+    """ Perform the actual work. """
+
+    log = shell.log.getChild("Configurator")
+
+    whipe(shell, log)
+
+    try:
+        beginning = shell.args.path
+        paths = beginning.rglob("*.y?ml") if beginning.is_dir() else [beginning]
+        for path in paths:
+            try:
+                log.info("Handling path %s", path)
+                data = yaml.load(path.open("r"))
+                process_topics(shell, log, data["topics"])
+                process_cfg(shell, log, data["cfg"], ["cfg"])
+            except OSError:
+                log.exception("Path %s failed", path)
+    finally:
+        log.info("Shutting down")
+        shell.shutdown()
+        log.info("Done")
 
 def main():
-    """ Main method of configurator. """
+    """ Program entry point. """
 
-    # Add factories
-    yaml.add_multi_constructor("!struct/", struct_factory)
-    yaml.add_constructor("!topic", json_factory)
-    yaml.add_constructor("!topics", topic_list_factory)
-    yaml.add_constructor("!json", json_factory)
+    logging.basicConfig()
 
-    logging.basicConfig()  # Setup logging.
-    # Setup argument parser.
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("path", type=pathlib.Path,
-                        description="Path to the network description file")
-    shell = Shell(thin=True, parser=parser)  # Create thin shell.
-    Configurator(shell)  # Create configurator.
-    shell.run()  # Run shell.
+    parser = argparse.ArgumentParser("Configurator for mauzr networks")
+    parser.add_argument("path", type=Path)
+    shell = Shell(thin=True, parser=parser)
+
+    t = threading.Thread(target=shell.run)
+    t.start()
+    run(shell)
+    t.join()
 
 if __name__ == "__main__":
     main()

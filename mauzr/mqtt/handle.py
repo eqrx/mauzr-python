@@ -74,7 +74,7 @@ class Handle:
 
         if len(chunks) < len(self.chunks):
             return chunks[-1] == "#"
-        elif len(chunks) > len(self.chunks):
+        if len(chunks) > len(self.chunks):
             return self.chunks[-1] == "#"
         for l, r in zip(chunks, self.chunks):
             if l != r and "#" not in (l, r) and "+" not in (l, r):
@@ -105,7 +105,7 @@ class Handle:
             self._sub()
 
         if new_session and self.last_send is not None:
-            self.mqtt.publish(handle=self, payload=self.last_send)
+            self.mqtt.publish_handle(handle=self, payload=self.last_send)
 
     def change_ser(self, ser):
         """ Change the serializer of this handle.
@@ -126,7 +126,6 @@ class Handle:
         if pkg_id == self.sub_id:
             self.sub_id = None
             self.subbed = True
-            self.mqtt.subscribed_handles.add(self)
 
     def on_unsub(self, pkg_id):
         """ To be called when an unsub ack comes in from the broker.
@@ -138,7 +137,6 @@ class Handle:
         if pkg_id == self.unsub_id:
             self.subbed = False
             self.unsub_id = None
-            self.mqtt.subscribed_handles.discard(self)
 
     def on_publish(self, topic, payload, retained, duplicate):
         """ To be called when a message for this handle arrives.
@@ -152,7 +150,7 @@ class Handle:
 
         handle = self
 
-        if "+" in topic or "#" in topic:
+        if topic != self.topic:
             handle = self.mqtt(topic=topic, ser=self.ser,
                                qos=self.qos, retain=self.retain)
 
@@ -164,6 +162,8 @@ class Handle:
 
         if retained:
             self.last_received = value
+
+        assert "+" not in handle.topic and "#" not in handle.topic
 
         for cb in self.callbacks:
             self.send_to_cb(cb, value, retained, duplicate, handle)
@@ -201,9 +201,9 @@ class Handle:
         payload = self.ser.pack(payload)
         if self.retain:
             self.last_send = payload
-        self.mqtt.publish(handle=self, payload=payload)
+        self.mqtt.publish_handle(handle=self, payload=payload)
 
-    def publish_meta(self):
+    def publish_meta(self, provided=False, requested=False, configured=False):
         """ Publish meta data of the topic. """
 
         mqtt, ser = self.mqtt, self.ser
@@ -211,12 +211,21 @@ class Handle:
         if "#" in chunks:
             raise RuntimeError("Can not publish meta to topics containing '#'.")
 
-        chunks = [c if c != "+" else "*" for c in chunks]
+        topic_part = "/".join([c if c != "+" else "*" for c in chunks])
+        kinds = []
+        if provided:
+            kinds.append("provided")
+        if requested:
+            kinds.append("requested")
+        if configured:
+            kinds.append("configured")
+        assert kinds
 
-        mqtt.publish(topic="/".join(["fmt"] + chunks),
-                     payload=ser.fmt_payload, qos=1, retain=True)
-        mqtt.publish(topic="/".join(["desc"] + chunks),
-                     payload=ser.desc_payload, qos=1, retain=True)
+        for kind in kinds:
+            mqtt.publish(topic=f"fmt/{topic_part}/{kind}",
+                         payload=ser.fmt_payload, qos=1, retain=True)
+            mqtt.publish(topic=f"desc/{topic_part}/{kind}",
+                         payload=ser.desc_payload, qos=1, retain=True)
 
     def sub(self, cb, wants_handle=False, wants_delivery=False):
         """ Add a callback for this topic.

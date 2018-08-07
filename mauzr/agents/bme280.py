@@ -14,7 +14,8 @@ class LowDriver(I2CMixin, PollMixin, Agent):
         super().__init__(*args, **kwargs)
 
         self.output_topic("calibration", r"struct\/!HhhHhhhhhhhhxBhB4s", None,
-                          ser=Struct("33s", "Raw calibration data"))
+                          ser=Struct(shell=self.shell, fmt="33s",
+                                     desc="Raw calibration data"))
         self.output_topic("output", r"struct\/8s", "Raw measurement")
         self.collect_task = self.after(3, self.collect)
 

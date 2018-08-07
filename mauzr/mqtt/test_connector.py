@@ -16,12 +16,13 @@ class QoSShelfTest(unittest.TestCase):
 
         shell = Mock()
         low = Mock()
+        low.__len__ = Mock(return_value=1)
         low.__getitem__ = Mock()
         low.__setitem__ = Mock()
         low.__delitem__ = Mock()
         default_id = 65535
         shell.args.data_path = Path("/tmp")
-        shelf = QoSShelf(shell=shell, default_id=default_id,
+        shelf = QoSShelf(log=Mock(), shell=shell, default_id=default_id,
                          factory=Mock(return_value=low))
         every = shell.sched.every
         every.assert_called_once_with(shell.args.sync_interval, shelf.sync)

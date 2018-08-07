@@ -19,8 +19,27 @@ class AgentHandlerMixin:
         self.agents = {}  # Agents of this shell.
         self.changed_agents = []  # Agents that changed and require update.
         self.agent_handle_task = self.sched.every(5, self.handle_agents)
+        self.agent_listeners = set()
 
         super().__init__(thin=thin)
+
+    def add_agent_listener(self, cb):
+        """ Add a listener for agent changes.
+
+        Args:
+            cb (callable): Listener that will be called with the agent and event
+        """
+
+        self.agent_listeners.add(cb)
+
+    def rm_agent_listener(self, cb):
+        """ Removes an agent listener.
+
+        Args:
+            cb (callable): Listener to remove.
+        """
+
+        self.agent_listeners.discard(cb)
 
     def apply_agent_event(self, agent, ev):
         """ Handle the change of a single agent.
@@ -33,23 +52,26 @@ class AgentHandlerMixin:
                   were generated while handling the change.
         """
 
+        a = agent
+
         agents = self.agents
         if ev is AE.WANTS_CREATION:
             # Agent created - Add to list.
-            agents[agent.name] = agent
+            agents[a.name] = agent
         elif ev is AE.WANTS_DESTRUCTION:
             # Agent done - Destruct and remove from list.
-            agent.discard()
-            del agents[agent.name]
-        elif ev is AE.WANTS_ACTIVATION and not agent.active and agent.ready:
+            a.discard()
+            del agents[a.name]
+        elif ev is AE.WANTS_ACTIVATION and not a.active and a.is_ready():
             # Agent wants to be activated.
-            agent.__enter__()
-        elif ev in (AE.WANTS_DEACTIVATION, AE.WANTS_RESTART) and agent.active:
+            a.__enter__()
+        elif ev in (AE.WANTS_DEACTIVATION, AE.WANTS_RESTART) and a.active:
             # Agent wants to be disabled (or restarted).
-            agent.__exit__(self, None, None, None)
+            a.__exit__(self, None, None, None)
             if ev is AE.WANTS_RESTART:
                 # Schedule activation if needed.
                 return [(agent, AE.WANTS_ACTIVATION)]
+        [cb(agent, ev) for cb in self.agent_listeners]
         return []
 
     def handle_agents(self):
@@ -70,11 +92,20 @@ class AgentHandlerMixin:
             event (mauzr.AgentEvent): Event that caused the change.
         """
 
+
         self.changed_agents.append((agent, event))  # Put into list.
 
         # Force immediate agent handling if setup is done.
-        if self.agent_handle_task:
+        if not self.agent_handle_task:
             self.agent_handle_task.enable(instant=True)
+
+    def shutdown_agents(self):
+        """ Shutdown all present agents. """
+
+        while self.agents:
+            for agent in list(self.agents.values()):
+                self.apply_agent_event(agent, AE.WANTS_DESTRUCTION)
+
 
     def __getattr__(self, name):
         """ Shortcut to receive agent of the shell.
@@ -120,14 +151,15 @@ class ParameterMixin:  # pragma: no cover
 
         arg = parser.add_argument
         arg('name', default=env.get('MAUZR_NAME'))
-        arg('passwd', default=env.get('MAUZR_PASSWD'))
-        arg('server', default=env.get('MAUZR_SERVER'))
+        arg('domain', default=env.get('MAUZR_DOMAIN'))
+        arg('key', default=env.get('MAUZR_KEY'))
+        arg('crt', default=env.get('MAUZR_CRT'))
         arg('ca', default=env.get('MAUZR_CA'))
         arg('--keepalive', default=env.get('MAUZR_KEEPALIVE', 60))
         arg('--backoff', default=env.get('MAUZR_BACKOFF', 10))
         arg('--max-sleep', default=env.get('MAUZR_MAX_SLEEP', 1))
         arg('--sync-interval', default=env.get('MAUZR_SYNC_INTERVAL', 60))
-        arg('--log-level', default=env.get('MAUZR_LOG_LEVEL', "debug"))
+        arg('--log-level', default=env.get('MAUZR_LOG_LEVEL', "info"))
         default = env.get('MAUZR_DATA_PATH', Path('/var/lib/mauzr'))
         arg('--data-path', default=default, type=Path)
 
@@ -143,9 +175,16 @@ class CoreComponentMixin:  # pragma: no cover
         # Setup scheduler and MQTT.
         self.sched = Scheduler(self)
         self.mqtt = Connector(self)
+        self.mqtt.__enter__()
 
         super().__init__(thin=thin)
 
+    def shutdown(self):
+        """ Shuts down the shell gracefully. """
+
+        self.shutdown_agents()
+        self.mqtt.__exit__()
+        self.sched.shutdown()
 
 class InitiatorMixin:  # pragma: no cover
     """ Mixin that handles initiation of the shell. """
@@ -170,16 +209,12 @@ class InitiatorMixin:  # pragma: no cover
 
         self.log.debug("Starting mqtt")
         # MQTT is required for everything following.
-        with self.mqtt:
-            try:
-                # Go directly into scheduler.
-                self.log.debug("Passing to scheduler")
-                self.sched.run()
-            finally:
-                # Discard all remaining agents.
-                [agent.discard() for agent in self.agents.values()]
-                self.agents = None
-                self.changed_agents = None
+        try:
+            # Go directly into scheduler.
+            self.log.debug("Passing to scheduler")
+            self.sched.run()
+        finally:
+            self.shutdown()
 
 
 class Shell(ParameterMixin, CoreComponentMixin,

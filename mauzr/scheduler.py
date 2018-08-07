@@ -2,7 +2,7 @@
 
 import time
 import weakref
-import threading
+from threading import Event
 
 __author__ = "Alexander Sowitzki"
 
@@ -43,7 +43,7 @@ class Task:
         if at is None:
             # If self not scheduled self is placed after
             return False
-        elif other_at is None:
+        if other_at is None:
             # If other is not scheduler self is placed before
             return True
         return at < other_at
@@ -64,6 +64,15 @@ class Task:
         self.sched.tasks_changed = True
         # Fire callback
         self.cb(*self.args, **self.kwargs)
+
+    def set(self, delay):
+        """ Set the delay of this task.
+
+        Args:
+            delay(float): Delay in seconds
+        """
+
+        self.delay = delay
 
     def enable(self, instant=False):
         """ Task will be executed after given delay if delay not True.
@@ -112,12 +121,9 @@ class Scheduler:
         self.log.debug("Setting up scheduler")
         self.tasks = []
         self.idle_cb = time.sleep
-        self.main_cb = None
-        self.thread = None
         self.tasks_changed = False
         self.max_sleep = shell.args.max_sleep
-        self.shutdown_request = threading.Event()
-        self.main_changed = threading.Event()
+        self.shutdown_request = Event()
 
     @staticmethod
     def delay_to(task):
@@ -178,22 +184,8 @@ class Scheduler:
             cb (callable): Callable that will be executed on idle time.
         """
 
+        assert callable(cb)
         self.idle_cb = cb
-
-    def main(self, cb):
-        """ Set main callback.
-
-        The shell executed the scheduler with this main thread. GUIs that
-        require the main thread can set a callable here that will get
-        exclusive use of the main thread when the scheduler starts.
-        The scheduler will shut down automatically after the callback returns.
-
-        Args:
-            cb (callable): Callable that will be executed with the main thread.
-        """
-
-        self.main_cb = cb
-        self.main_changed.set()
 
     def shutdown(self):
         """ Shut down the scheduler.
@@ -202,10 +194,9 @@ class Scheduler:
         """
 
         self.shutdown_request.set()
-        self.main_changed.set()
 
-    def maintain(self):
-        """ Perform scheduler option. """
+    def run(self):
+        """ Run scheduler. """
 
         self.log.debug("Beginning to serve")
         tasks, max_sleep = self.tasks, self.max_sleep # Quick access
@@ -227,24 +218,3 @@ class Scheduler:
                 self.idle_cb(delay)
             else:
                 tasks[0]().fire()
-
-    def run(self):
-        """ Run scheduler.
-
-        If main callback is set spawn an new thread for the scheduler and
-        run it while calling the callback. If callback is not given run
-        scheduler with this thread until shutdown request is set.
-        """
-
-        self.thread = threading.Thread(target=self.maintain,
-                                       name="mauzr.sched")
-        try:
-            self.thread.start()
-            while not self.shutdown_request.is_set():
-                if callable(self.main_cb):
-                    self.main_cb()
-                else:
-                    self.main_changed.wait()
-                    self.main_changed.clear()
-        finally:
-            self.thread.join()

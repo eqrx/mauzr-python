@@ -1,6 +1,5 @@
 """ Test scheduler. """
 
-import time
 import logging
 import unittest
 from unittest.mock import Mock, NonCallableMock
@@ -50,42 +49,6 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual(kwargs, task.kwargs)
         self.assertFalse(task.repeat)
 
-    def test_maintain(self):
-        """ Test maintain functions. """
-
-        shell = self.shell_mock()
-        max_sleep = 1337
-        shell.args.max_sleep = max_sleep
-        sched = Scheduler(shell)
-        times = [0, 0, 20, 1, 2, 2, 20]
-
-        self.assertFalse(sched.tasks_changed)
-
-        time_func = Mock(spec_set=[], side_effect=times)
-
-        calls = []
-        def _cb(delay):
-            calls.append(delay)
-
-        delays = [1, 2, 4]
-
-        def _idle(delay):
-            if delay == max_sleep:
-                sched.shutdown()
-        sched.idle(_idle)
-
-        tasks = [sched.after(delay, _cb, delay)
-                 for delay in delays]
-        self.assertFalse(sched.tasks_changed)
-        for task in tasks:
-            task.time_func = time_func
-            task.enable(instant=True)
-        self.assertTrue(sched.tasks_changed)
-        self.assertFalse(calls)
-        sched.maintain()
-        self.assertFalse(sched.tasks_changed)
-        self.assertEqual(delays, calls)
-
     def test_task_cleanup(self):
         """ Test cleanup of tasks. """
 
@@ -101,22 +64,6 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual(1, len(sched.tasks))
         del task
         self.assertEqual(0, len(sched.tasks))
-
-    def test_run(self):
-        """ Test run method. """
-
-        shell = self.shell_mock()
-        sched = Scheduler(shell)
-        main = Mock(spec_set=[], side_effect=sched.shutdown)
-        def _side():
-            time.sleep(0.001)
-            sched.main(main)
-        maintain = Mock(spec_set=[], side_effect=_side)
-
-        sched.maintain = maintain
-        sched.run()
-        sched.maintain.assert_called_once_with()
-        main.assert_called_once_with()
 
 
 class TaskTest(unittest.TestCase):
@@ -190,8 +137,6 @@ class TaskTest(unittest.TestCase):
 
         self.assertFalse(task1)
         self.assertFalse(task2)
-        self.assertFalse(task1 < task1)
-        self.assertFalse(task2 < task2)
         self.assertFalse(task2 < task1)
         self.assertFalse(task1 < task2)
 
@@ -199,8 +144,6 @@ class TaskTest(unittest.TestCase):
 
         self.assertTrue(task1)
         self.assertFalse(task2)
-        self.assertFalse(task1 < task1)
-        self.assertFalse(task2 < task2)
         self.assertFalse(task2 < task1)
         self.assertTrue(task1 < task2)
 
@@ -208,8 +151,6 @@ class TaskTest(unittest.TestCase):
 
         self.assertTrue(task1)
         self.assertTrue(task2)
-        self.assertFalse(task1 < task1)
-        self.assertFalse(task2 < task2)
         self.assertFalse(task2 < task1)
         self.assertTrue(task1 < task2)
 
@@ -224,7 +165,5 @@ class TaskTest(unittest.TestCase):
 
         self.assertTrue(task1)
         self.assertFalse(task2)
-        self.assertFalse(task1 < task1)
-        self.assertFalse(task2 < task2)
         self.assertFalse(task2 < task1)
         self.assertTrue(task1 < task2)

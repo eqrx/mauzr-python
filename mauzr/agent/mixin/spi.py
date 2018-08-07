@@ -1,6 +1,7 @@
 """ Provide SPI functionality. """
 
 
+import array
 import fcntl
 import ctypes
 from contextlib import contextmanager
@@ -11,16 +12,17 @@ __author__ = "Alexander Sowitzki"
 class IoctlData(ctypes.Structure):
     """ Ioctl message for spi transfer. See linux spi doc. """
 
-    _fields_ = [('tx_buf', ctypes.POINTER(ctypes.c_uint8)),
-                ('rx_buf', ctypes.POINTER(ctypes.c_uint8)),
-                ('len', ctypes.c_uint32),
-                ('speed_hz', ctypes.c_uint32),
-                ('delay_usecs', ctypes.c_uint16),
-                ('bits_per_word', ctypes.c_uint8),
-                ('cs_change', ctypes.c_uint8),
-                ('tx_nbits', ctypes.c_uint8),
-                ('rx_nbits', ctypes.c_uint8),
-                ('pad', ctypes.c_uint16)]
+    _fields_ = [('tx_buf', ctypes.c_ulonglong),
+                ('rx_buf', ctypes.c_ulonglong),
+                ('len', ctypes.c_uint),
+                ('speed_hz', ctypes.c_uint),
+                ('delay_usecs', ctypes.c_ushort),
+                ('bits_per_word', ctypes.c_ubyte),
+                ('cs_change', ctypes.c_ubyte),
+                ('tx_nbits', ctypes.c_ubyte),
+                ('rx_nbits', ctypes.c_ubyte),
+                ('pad', ctypes.c_ushort)]
+
 
 
 class Bus:  # pragma: no cover
@@ -52,11 +54,13 @@ class Bus:  # pragma: no cover
             # Try casting to bytes if data is list of ints or bytearray.
             data = bytes(data)
 
-        buf = ctypes.create_string_buffer(data)  # Convert to c buffer
+
+        buf = array.array('B', data) # Convert to c buffer
+        buf_addr, buf_len = buf.buffer_info()
 
         # Prepare ioctl parameter.
-        msg = IoctlData(tx_buf=buf, rx_buf=buf,
-                        len=len(data), speed_hz=self.speed)
+        msg = IoctlData(tx_buf=buf_addr, rx_buf=buf_addr,
+                        len=buf_len, speed_hz=self.speed)
 
         # Perform SPI operation.
         fcntl.ioctl(self.fd, 0x40206b00, msg)
