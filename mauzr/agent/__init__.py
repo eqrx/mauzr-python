@@ -51,8 +51,6 @@ class Agent:
 
         with suppress(MQTTOfflineError):
             self.status_handle(False)
-        # Add default context.
-        self.add_context(self.setup)
         # Make log level of agent an option.
         self.option("log_level", "str", "Log level of the agent",
                     cb=lambda l: self.log.setLevel(l.upper()),
@@ -154,8 +152,9 @@ class Agent:
             arm (bool): Arm this agent.
         """
 
-        if arm:
+        if arm and not self.__armed:
             self.__armed = True
+            self.add_context(self.setup)
 
         if restart:
             self.log.info("Restarting")

@@ -75,7 +75,7 @@ class SPIMixin:  # pragma: no cover
 
         self.spi = None
         self.option("spi_path", "str", "SPI device path")
-        self.option("spi_speed", "struct/!I", "SPI device path")
+        self.option("spi_speed", "struct/!I", "SPI speed")
 
         self.add_context(self.__spi_context)
 

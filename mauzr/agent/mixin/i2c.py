@@ -15,9 +15,9 @@ class Message(ctypes.Structure):
     """ Represent the struct i2c_msg from linux/i2c-dev.h. """
 
     _fields_ = [('addr', ctypes.c_uint16),
-                ('flags', ctypes.c_uint16),
-                ('len', ctypes.c_int16),
-                ('buf', ctypes.POINTER(ctypes.c_uint8))]
+                ('flags', ctypes.c_ushort),
+                ('len', ctypes.c_short),
+                ('buf', ctypes.POINTER(ctypes.c_char))]
 
     __slots__ = [name for name, type in _fields_]
 
@@ -26,7 +26,7 @@ class IoctlData(ctypes.Structure):
     """ Represent the struct i2c_rdwr_ioctl_data from linux/i2c-dev.h. """
 
     _fields_ = [('msgs', ctypes.POINTER(Message)),
-                ('nmsgs', ctypes.c_int32)]
+                ('nmsgs', ctypes.c_int)]
 
     __slots__ = [name for name, type in _fields_]
 
@@ -107,51 +107,22 @@ class Device:  # pragma: no cover
         if amount is None:
             amount = struct.calcsize(fmt)
 
-        buf = self._transaction(((self.WRITE_ACTION, (register,)),
-                                 (self.READ_ACTION, amount)))[0]
+        buf = create_string_buffer(bytes([register]), 1)
+        write = Message(addr=self.address, flags=0, len=len(buf), buf=buf)
+        buf = create_string_buffer(amount)
+        read = Message(addr=self.address, flags=I2C_M_RD, len=len(buf), buf=buf)
 
+        transaction = (Message*2)(write, read)
+        message = IoctlData(msgs=transaction, nmsgs=2)
+        fcntl.ioctl(self.fd, I2C_RDWR, message)
+
+        data = bytes(buf)
+        if amount is not None:
+            assert amount == len(data)
         if fmt:
-            buf = struct.unpack(fmt, buf)
-            return buf[0] if len(buf) == 1 else buf
-
-        return buf
-
-    def _encode_transaction(self, actions):
-        """ Create transcation struct from actions. """
-
-        for action, data in actions:
-            if action == self.READ_ACTION:
-                amount = data
-                yield Message(addr=self.address, flags=I2C_M_RD,
-                              len=amount, buf=create_string_buffer(amount))
-            elif action == self.WRITE_ACTION:
-                if not isinstance(data, bytes):
-                    data = bytes(data)
-                yield Message(addr=self.address, flags=0, len=len(data),
-                              buf=create_string_buffer(data))
-            else:
-                raise ValueError("Invalid action: {}".format(action))
-
-    def _transaction(self, actions):
-        """ Perform an I2C transaction.
-
-        Args:
-            actions (tuple): Tuple of actions to perform.
-        Returns:
-            tuple: Transaction results
-        Raises:
-            ValueError: If action is invalid.
-        """
-
-        actions = self._encode_transaction(actions)
-
-        # Perform action set with magic
-        msgs = (Message * len(actions))(*actions)
-        strct = IoctlData(msgs=msgs, nmsgs=len(actions))
-        fcntl.ioctl(self.fd, I2C_RDWR, strct)
-
-        # Return all reads
-        return [msg.buf for msg in actions if msg.flags == I2C_M_RD]
+            data = struct.unpack(fmt, data)
+            return data[0] if len(data) == 1 else data
+        return data
 
     def __enter__(self):
         # Open the bus file.
@@ -174,8 +145,8 @@ class I2CMixin:  # pragma: no cover
         super().__init__(*args, **kwargs)
 
         self.i2c = None
-        self._option("i2c_path", "str", "Path of the I2C bus")
-        self._option("i2c_address", "struct/B", "Address of the chip")
+        self.option("i2c_path", "str", "Path of the I2C bus")
+        self.option("i2c_address", "struct/B", "Address of the chip")
 
         self.add_context(self.__i2c_context)
 

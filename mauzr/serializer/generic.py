@@ -1,5 +1,6 @@
 """ Generic serializers. """
 
+import re
 import struct
 import json
 
@@ -105,6 +106,8 @@ class Struct(Serializer):
         desc (str): Description of handled information.
     """
 
+    SIMPLE_MATCHER = re.compile(r"^[<>!=@]?(?:\d*[spP]|[^spP])$")
+
     fmt = "struct/" # Default format without struct format.
 
     def __init__(self, shell, fmt, desc):
@@ -115,7 +118,7 @@ class Struct(Serializer):
         self.fmt = "struct/{}".format(fmt)  # Concat serializer and struct info.
         self.struct_fmt = fmt
         # Serializer handles simple type if format contains only one field.
-        self.simple_type = len(fmt) == 1 or len(fmt) == 2 and fmt[0] in "!<>"
+        self.simple_type = bool(self.SIMPLE_MATCHER.fullmatch(fmt))
 
     def pack(self, obj):
         """ Pack field into bytes.
