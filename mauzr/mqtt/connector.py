@@ -154,7 +154,7 @@ def default_socket_factory(log, domain, ca, crt, key):  # pragma: no cover
     ctx.set_ciphers("HIGH")
     ctx.set_alpn_protocols(("mqtt/3.1.1",))
     ctx.verify_mode = ssl.CERT_REQUIRED
-    #ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.check_hostname = True
 
     def _new():
