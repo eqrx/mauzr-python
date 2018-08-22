@@ -35,7 +35,8 @@ class ColorInputMixin:
 
         colors = self.color_decider(value)  # Request color decision.
         if colors != self.colors:  # If color is same no change is self.
-            self.on_new_state()
+            if self.colors is None:
+                self.on_new_state()
             self.colors = colors  # Remember colors
 
     def draw_background(self, surf):
