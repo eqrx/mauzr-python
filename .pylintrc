@@ -126,7 +126,7 @@ max-statements=50
 max-bool-expr=5
 max-branches=16
 max-public-methods=20
-max-attributes=14
+max-attributes=15
 # I sometimes like helper methods and representation classes
 max-args=10
 min-public-methods=0
