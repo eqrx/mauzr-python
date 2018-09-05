@@ -32,8 +32,7 @@ class LowDriver(Agent, I2CMixin, PollMixin):
         self.collect_task = None
         super().__init__(*args, **kwargs)
 
-        self.output_topic("output",
-                          r"struct\/<HH", "Output for measurements")
+        self.output_topic("output", r"struct\/<HH", "Output for measurements")
         self.update_agent(arm=True)
 
     @contextmanager

@@ -18,7 +18,7 @@ class Gain(enum.IntFlag):
     SIXTEEN = 0x0a
 
 
-class LowDriver(I2CMixin, PollMixin, Agent):
+class Driver(I2CMixin, PollMixin, Agent):
     """ Low driver for the ADS1015. """
 
     def __init__(self, *args, **kwargs):

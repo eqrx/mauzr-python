@@ -21,7 +21,6 @@ class BME680Calculator:
              127110228, 64000000, 32258064, 16016016, 8000000, 4000000,
              2000000, 1000000, 500000, 250000, 125000)
 
-
     @staticmethod
     def calc_t_fine(reading, tc):
         """ Calculate t_fine.
