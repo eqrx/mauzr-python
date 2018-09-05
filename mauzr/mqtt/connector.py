@@ -1,5 +1,6 @@
 """ MQTT connection facilities. """
 
+import re
 import threading
 import socket
 import ssl
@@ -28,7 +29,7 @@ class QoSShelf:
 
     def __init__(self, shell, log, default_id, factory=shelve.open):
         self.log = log
-        self.path = str(shell.args.data_path/"qos")
+        self.path = str(shell.args.storage_path/"qos")
         self.default_id = default_id
         self.shelf = None
         interval = shell.args.sync_interval
@@ -195,19 +196,23 @@ class Connector:
 
         # Setup fields.
         self.sched, self.sock = shell.sched, None  # Basics.
-        self.socket_factory = socket_factory(self.log, args.domain,
-                                             args.ca, args.crt, args.key)()
+
+        regex = r"[^@~.]+@[^@\.]+\.([^@\.][^@]*)"
+        domain = re.fullmatch(regex, shell.name).group(1)
+
+        self.socket_factory = socket_factory(self.log, domain,
+                                             args.ca, args.cert, args.key)()
         self.handles = weakref.WeakValueDictionary()  # Dict of topic handles.
         self.connection_listeners = []  # Listeners for connection changes.
         self.qos_shelf = shelf_factory(shell, self.log, 2)  # QoS storage.
 
 
         # Prepare packages.
-        will_args = {"will_topic": "status/" + args.name, "will_qos": 0,
+        will_args = {"will_topic": "status/" + shell.name, "will_qos": 0,
                      "will_payload": b'\x00', "will_retain": True}
         self.disconnect_pkg = Disconnect(will_pkg_id=1, **will_args)
         self.connect_pkg = Connect(clean_session=False, keepalive=keepalive,
-                                   will_pkg_id=0, client_id=args.name,
+                                   will_pkg_id=0, client_id=shell.name,
                                    **will_args)
 
         # Required tasks-

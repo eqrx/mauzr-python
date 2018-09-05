@@ -101,12 +101,10 @@ def run(shell):
     whipe(shell, log)
 
     try:
-        beginning = shell.args.path
-        paths = beginning.rglob("*.y?ml") if beginning.is_dir() else [beginning]
-        for path in paths:
+        for path in shell.args.paths:
             try:
                 log.info("Handling path %s", path)
-                data = yaml.load(path.open("r"))
+                data = yaml.load(open(path, "r"))
                 process_topics(shell, log, data["topics"])
                 process_cfg(shell, log, data["cfg"], ["cfg"])
             except OSError:
@@ -122,7 +120,7 @@ def main():
     logging.basicConfig()
 
     parser = argparse.ArgumentParser("Configurator for mauzr networks")
-    parser.add_argument("path", type=Path)
+    parser.add_argument("paths", nargs='+')
     shell = Shell(thin=True, parser=parser)
 
     t = threading.Thread(target=shell.run)

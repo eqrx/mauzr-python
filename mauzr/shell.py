@@ -75,10 +75,18 @@ class ParameterMixin:  # pragma: no cover
         self._setup_arguments(parser)
         # Parse arguments.
         self.args = parser.parse_args()
+
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.backends import default_backend
+        data = open(self.args.cert, "rb").read()
+        cert = x509.load_pem_x509_certificate(data, default_backend())
+        attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        self.name = attrs[0].value
+
         # Prepare data dir.
-        self.args.data_path /= self.args.name
-        self.args.data_path.mkdir(exist_ok=True)
-        self.name = self.args.name
+        self.args.storage_path = Path(self.args.storage_path) / self.name
+        self.args.storage_path.mkdir(exist_ok=True)
 
         super().__init__(thin=thin)
 
@@ -91,25 +99,23 @@ class ParameterMixin:  # pragma: no cover
         """
 
         arg = parser.add_argument
-        arg('--name', default=env.get('MAUZR_NAME'))
-        arg('--domain', default=env.get('MAUZR_DOMAIN'))
-        arg('--key', default=env.get('MAUZR_KEY'))
-        arg('--crt', default=env.get('MAUZR_CRT'))
-        arg('--ca', default=env.get('MAUZR_CA'))
+        arg('--key', type=Path, default=env.get('MAUZR_KEY'))
+        arg('--cert', type=Path, default=env.get('MAUZR_CERT'))
+        arg('--ca', type=Path, default=env.get('MAUZR_CA'))
         arg('--keepalive', default=env.get('MAUZR_KEEPALIVE', 60))
         arg('--backoff', default=env.get('MAUZR_BACKOFF', 10))
         arg('--max-sleep', default=env.get('MAUZR_MAX_SLEEP', 1))
         arg('--sync-interval', default=env.get('MAUZR_SYNC_INTERVAL', 60))
         arg('--log-level', default=env.get('MAUZR_LOG_LEVEL', "info"))
-        default = env.get('MAUZR_DATA_PATH', Path('/var/lib/mauzr'))
-        arg('--data-path', default=default, type=Path)
+        default = env.get('MAUZR_DATA_PATH', '/var/lib/mauzr')
+        arg('--storage-path', default=default)
 
 class CoreComponentMixin:  # pragma: no cover
     """ Mixin to provide core components to the shell. """
 
     def __init__(self, thin=False):
         # Setup root logger.
-        self.log = logging.getLogger(self.args.name)
+        self.log = logging.getLogger(self.name)
         self.log.setLevel(logging.getLevelName(self.args.log_level.upper()))
         self.log.debug("Logger created")
 
