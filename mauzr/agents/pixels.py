@@ -2,6 +2,7 @@
 
 import math
 import struct
+from contextlib import contextmanager, suppress
 from mauzr import Agent, PollMixin, Serializer, SPIMixin
 
 __author__ = "Alexander Sowitzki"
@@ -48,7 +49,7 @@ class LowDriver(SPIMixin, Agent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.input_topic("input", r"struct/\d+B", "Input for raw pixel data")
+        self.input_topic("input", r"struct/\d+s", "Input for raw pixel data")
 
         self.update_agent(arm=True)
 
@@ -74,7 +75,7 @@ class HighDriver(Agent):
         self.lut = tuple(self.generate_lut())
         super().__init__(*args, **kwargs)
 
-        self.output_topic("output", r"struct/\d+B", "Output for raw pixel data")
+        self.output_topic("output", r"struct/\d+s", "Output for raw pixel data")
         self.input_topic("input", r"struct\/\d+B", "Input for channel colors")
         self.update_agent(arm=True)
 
@@ -134,7 +135,7 @@ class Compositor(Agent, PollMixin):
         self.option("coordinates", None, "Input for pixel coordinates",
                     ser=ser, cb=self.on_coord_change)
 
-        self.input_topic("enabled", r"struct\/B", "Compositor enabled",
+        self.input_topic("enabled", r"struct\/\?", "Compositor enabled",
                          cb=self.on_enabled, restart=False)
         self.update_agent(arm=True)
 

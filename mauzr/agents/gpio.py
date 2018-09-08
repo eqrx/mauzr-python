@@ -19,7 +19,7 @@ class Output(Agent):
     def __init__(self, *args, **kwargs):
         self.fd = None
         super().__init__(*args, **kwargs)
-        self.option("identifier", "str", "Output name")
+        self.option("identifier", "struct/B", "Output name")
         self.input_topic("input", r"struct\/[?B]",
                          "Input topic for the pin value")
         self.update_agent(arm=True)
@@ -59,7 +59,7 @@ class Input(Agent):
         # Task to ensure an input has stabilized.
         self.stabilize_task = None
         super().__init__(*args, **kwargs)
-        self.option("identifier", "str", "Input identifier")
+        self.option("identifier", "struct/B", "Input identifier")
         self.option("edge", "str", "Edge to detect")
         self.output_topic("output", r"struct\/[?B]",
                           "Output topic for the pin value")
