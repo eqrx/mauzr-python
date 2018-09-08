@@ -202,6 +202,41 @@ class Compositor(Agent, PollMixin):
 
         raise NotImplementedError()
 
+class Merger(Agent):
+    """ Aggregates multiple inputs by using a converter function ."""
+
+    def __init__(self, *args, **kwargs):
+        self.values = None
+        super().__init__(*args, **kwargs)
+
+        self.option("inputs", "topics", "Input topics")
+        self.output_topic("output", r".*", "Output topic")
+
+        self.update_agent(arm=True)
+
+    @contextmanager
+    def setup(self):
+        try:
+            self.values = [None] * len(self.inputs)
+            # Subscribe all inputs and yield.
+            [self.static_input(h, self.on_input, sub={"wants_handle": True})
+             for h in self.inputs]
+            yield
+        finally:
+            # Unsubscribe all inputs.
+            for h in self.inputs:
+                with suppress(KeyError):
+                    self.rm_static_input(h)
+            self.values = None
+
+    def on_input(self, value, handle):
+        self.values[self.inputs.index(handle)] = value
+        if None not in self.values:
+            buf = []
+            [buf.extend(v) for v in self.values]
+            self.output(buf)
+            self.values = [None] * len(self.inputs)
+
 
 def create_ring_coordinates(radius, count):
     """ Create coordinates arranged in a circle.
