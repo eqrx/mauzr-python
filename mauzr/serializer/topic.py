@@ -77,15 +77,26 @@ class Topics(Serializer):
             handles (list): Handles to serialize.
         Returns:
             bytes: Serialized topic information as JSON string.
+        Raises:
+            SerializationError: On error.
         """
 
         if handles is None:
             return bytes()
 
-        topics = [{"topic": h.topic, "qos": h.qos,
-                   "retain": h.retain, "fmt": h.ser.fmt} for h in handles]
+        data = []
+        for h in handles:
+            if isinstance(h, dict):
+                k = set(("topic", "qos", "retain", "fmt"))
+                if k.issubset(set(h.keys())):
+                    data.append(h)
+                else:
+                    raise SerializationError(f"Invalid topic information: {h}")
+            else:
+                data.append({"topic": h.topic, "qos": h.qos,
+                             "retain": h.retain, "fmt": h.ser.fmt})
 
-        return json.dumps(topics).encode()
+        return json.dumps(data).encode()
 
     def unpack(self, data):
         """ Unpack a list of topic information and create handles for it.

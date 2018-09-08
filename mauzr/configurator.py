@@ -81,7 +81,10 @@ def process_cfg(shell, log, data, offset):
     topic = "/".join(offset)
 
     if "_value" in keys:
-        value, fmt, desc = data["_value"]
+        try:
+            value, fmt, desc = data["_value"]
+        except ValueError:
+            raise ValueError(f"Invalid _value: {topic}")
         ser = Serializer.from_well_known(shell=shell, fmt=fmt, desc=desc)
         h = shell.mqtt(topic=topic, ser=ser, qos=1, retain=True)
         h.publish_meta(configured=True)
