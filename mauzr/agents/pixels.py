@@ -169,38 +169,8 @@ class Compositor(Agent, PollMixin):
             list: List containing tuples with color channels as floats within.
         """
 
-        buf = bytearray()
-        for coord in self.coords:
-            buf.extend(self.color(coord))
-        return buf
-
-    def color(self, coord):
-        """ Return the color at a coordinate.
-
-        Method may be overridden to increase performance. If overridden
-        channel may not be implemented.
-
-        Args:
-            coord (tuple): Requested coordinate.
-        Returns:
-            tuple: Tuple containing channel values as floats.
-        """
-
-        return [min(max(self.channel(coord, channel), 0), 255)
-                for channel in range(self.channels)]
-
-    def channel(self, coord, channel):
-        """ Return the intensity for a color channel at a coordinate.
-
-        Args:
-            coord (tuple): Requested coordinate.
-            channel (int): Channel id.
-        Returns:
-            float: Intensity of the channel. Must be normalized to be \
-            withing 0.0 and 1.0.
-        """
-
         raise NotImplementedError()
+
 
 class Merger(Agent):
     """ Aggregates multiple inputs by using a converter function ."""
