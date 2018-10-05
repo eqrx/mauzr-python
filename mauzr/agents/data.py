@@ -141,14 +141,12 @@ class Toggler(Agent):
                           "If setting to false is allowed")
         self.output_topic("toggling_allowed", r"struct\/\?",
                           "If toggling is allowed")
-
-        self.condition = 0
-        self.value = None
+        self.update_agent(arm=True)
 
     @contextmanager
     def setup(self):
         # Publish initial state.
-        self.publish(self.reset_value, self.condition_value)
+        self.publish(self.reset_value, self.reset_condition)
         yield
         # Publish reset value and announce that no changes are allowed.
         self.publish(self.reset_value, 1 if self.reset_value else -1)
@@ -174,16 +172,16 @@ class Toggler(Agent):
     def on_toggle(self, _):
         """ Toggle the value if allowed. """
 
-        if self.condition == 0:
-            self.publish(not self.value, self.condition)
+        if self.condition_value == 0:
+            self.publish(not self.value, self.condition_value)
         else:
             self.log.debug("Toggling has been prevented by condition")
 
     def on_set(self, value):
         """ Request a value state explicitly. """
 
-        if self.condition == 0:
-            self.publish(value, self.condition)
+        if self.condition_value == 0:
+            self.publish(value, self.condition_value)
 
     def on_condition(self, condition):
         """ Update the condition. """
