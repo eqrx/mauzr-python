@@ -128,18 +128,18 @@ class Toggler(Agent):
 
         self.option("reset_value", "struct/?", "Value on start")
         self.option("reset_condition", "struct/b", "Default condition value")
-        self.input_topic("set", r"struct\/?", "Request a value state",
+        self.input_topic("set", r"struct\/\?", "Request a value state",
                          cb=self.on_set)
-        self.input_topic("toggle", r"struct\/?", "Request to toggle",
+        self.input_topic("toggle", r"struct\/\?", "Request to toggle",
                          cb=self.on_toggle)
         self.input_topic("condition", r"struct\/b", "Condition for output",
                          cb=self.on_condition)
-        self.output_topic("output", r"struct\/?", "Output")
-        self.output_topic("true_allowed", r"struct\/?",
+        self.output_topic("output", r"struct\/\?", "Output")
+        self.output_topic("true_allowed", r"struct\/\?",
                           "If setting to true is allowed")
-        self.output_topic("false_allowed", r"struct\/?",
+        self.output_topic("false_allowed", r"struct\/\?",
                           "If setting to false is allowed")
-        self.output_topic("toggling_allowed", r"struct\/?",
+        self.output_topic("toggling_allowed", r"struct\/\?",
                           "If toggling is allowed")
 
         self.condition = 0

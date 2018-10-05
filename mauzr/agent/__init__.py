@@ -289,7 +289,8 @@ class Agent:
 
             fmt = handle.ser.fmt
             if not re.fullmatch(regex, fmt):
-                raise ValueError(f"Format {fmt} does not match {regex}.")
+                raise ValueError(f"Format {fmt} does not match {regex} "
+                                 f"for {handle.topic}.")
             if ser is not None:
                 handle.change_ser(ser)
 
