@@ -123,11 +123,14 @@ class Toggler(Agent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.condition_value = None
+        self.value = None
 
         self.option("reset_value", "struct/?", "Value on start")
-        self.input_topic("set", r".*", "Request a value state",
+        self.option("reset_condition", "struct/b", "Default condition value")
+        self.input_topic("set", r"struct\/?", "Request a value state",
                          cb=self.on_set)
-        self.input_topic("toggle", r".*", "Request to toggle",
+        self.input_topic("toggle", r"struct\/?", "Request to toggle",
                          cb=self.on_toggle)
         self.input_topic("condition", r"struct\/b", "Condition for output",
                          cb=self.on_condition)
@@ -145,7 +148,7 @@ class Toggler(Agent):
     @contextmanager
     def setup(self):
         # Publish initial state.
-        self.publish(self.reset_value, self.condition)
+        self.publish(self.reset_value, self.condition_value)
         yield
         # Publish reset value and announce that no changes are allowed.
         self.publish(self.reset_value, 1 if self.reset_value else -1)
@@ -158,12 +161,12 @@ class Toggler(Agent):
             new_condition (int): New condition to apply.
         """
 
-        if new_value != self.value or new_condition != self.condition:
+        if new_value != self.value or new_condition != self.condition_value:
             self.toggling_allowed(new_condition == 0)
             self.false_allowed(new_condition == 0 and new_value)
             self.false_allowed(new_condition == 0 and not new_value)
-        if new_condition != self.condition:
-            self.condition = new_condition
+        if new_condition != self.condition_value:
+            self.condition_value = new_condition
         if new_value != self.value:
             self.value = new_value
             self.output(new_value)
