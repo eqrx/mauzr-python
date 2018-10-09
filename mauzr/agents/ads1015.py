@@ -48,8 +48,5 @@ class Driver(I2CMixin, PollMixin, Agent):
     def collect(self):
         """ Collect and publish result. """
 
-        msb, lsb = self.i2c.read_register(0x00, amount=2)
-        sample = msb << 4 | lsb >> 4
-        if sample & 0x800:
-            sample -= 1 << 12
+        sample = self.i2c.read_register(0x00, fmt=">H") >> 4
         self.output(sample)
