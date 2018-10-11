@@ -1,6 +1,7 @@
 """ Integration with systemd. """
 
 import os
+import subprocess
 from contextlib import contextmanager
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOCK_CLOEXEC
 from mauzr import Agent
@@ -8,7 +9,7 @@ from mauzr import Agent
 __author__ = "Alexander Sowitzki"
 
 
-class Systemd(Agent):
+class Notify(Agent):
     """ Interface to systemd.
 
     When the shell is started via systemd this agent can be used to create
@@ -71,3 +72,29 @@ class Systemd(Agent):
         """
 
         self.sock.sendto(message.encode(), self.addr)
+
+
+class Service(Agent):
+    """ Manage a Systemd service. """
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.input_topic("active", r"struct\/\?",
+                         "If target service should be active")
+        self.option("service", "str", "Name of the service to manage")
+
+        self.add_context(self.setup)
+        self.update_agent(arm=True)
+
+
+    def on_input(self, requested):
+        """ Set active state. """
+
+        running = subprocess.call(["systemctl", "is-active", self.service]) == 0
+        if running == requested:
+            return
+
+        subprocess.check_call(["sudo", "systemctl",
+                               "start" if requested else "stop", self.service])

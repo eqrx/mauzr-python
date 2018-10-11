@@ -146,8 +146,8 @@ class InitiatorMixin:  # pragma: no cover
             # Spawn optional agents.
             spawner.spawn_agent(LogSender, "logger")
             if 'NOTIFY_SOCKET' in env:
-                from mauzr.agents.systemd import Systemd
-                spawner.spawn_agent(Systemd, "systemd")
+                from mauzr.agents.systemd import Notify
+                spawner.spawn_agent(Notify, "systemd")
         self.log.debug("Setup done")
         super().__init__()
 
