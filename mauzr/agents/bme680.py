@@ -5,7 +5,6 @@ import struct
 
 from contextlib import contextmanager
 from mauzr import Agent, I2CMixin, PollMixin
-from mauzr.serializer import Struct
 
 __author__ = "Alexander Sowitzki"
 

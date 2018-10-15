@@ -20,7 +20,8 @@ class Indicator(ConfirmationMixin, TextInputMixin, ColorInputMixin, Element):
         super().__init__(*args, **kwargs)
         self.timeout_task = None
         self.option("timeout", "struct/!I", "Timeout delay in seconds")
-        self.input_topic("timeout_input", r".*", "Timeout input")
+        self.input_topic("timeout_input", r".*", "Timeout input",
+                         cb=self.reset_timeout)
         self.add_context(self.__indicator_context)
 
         self.update_agent(arm=True)

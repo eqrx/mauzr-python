@@ -1,6 +1,5 @@
 """ Driver for TSL2561 devices. """
 
-import os
 from contextlib import contextmanager
 from mauzr import Agent, PollMixin, I2CMixin
 

@@ -21,7 +21,7 @@ class QoSShelfTest(unittest.TestCase):
         low.__setitem__ = Mock()
         low.__delitem__ = Mock()
         default_id = 65535
-        shell.args.data_path = Path("/tmp")
+        shell.args.storage_path = Path("/tmp")
         shelf = QoSShelf(log=Mock(), shell=shell, default_id=default_id,
                          factory=Mock(return_value=low))
         every = shell.sched.every
@@ -30,7 +30,7 @@ class QoSShelfTest(unittest.TestCase):
         every.reset_mock()
         shelf.__enter__()
         low.setdefault.assert_called_once_with("pkg_id", default_id)
-        shelf.factory.assert_called_once_with(str(shell.args.data_path/"qos"))
+        shelf.factory.assert_called_once_with(str(shell.args.storage_path/"qos"))
         every.assert_not_called()
         every().enable.assert_called_once_with()
 
