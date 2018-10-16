@@ -34,18 +34,41 @@ class Light(Agent):
         self.api = None
 
 
-class DimmableLight(Light):
-    """ Controller agent for IKEA tradfri dimmable lights. """
+class TemperatureSettable(Light):
+    """ Controller the light temperature of IKEA tradfri lights. """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.input_topic("input", r"struct/B", "Dimmer setting")
-        self.update_agent(arm=True)
+        self.input_topic("temperature", r"struct/B", "Color temperature",
+                         cb=self.temperature)
 
-    def on_input(self, value):
+    def temperature(self, value):
+        """ Set temperature value. """
+
+        value = min(value+250, 454)
+        self.api(self.light.light_control.set_color_temp(value))
+
+
+class IntensitySettable(Light):
+    """ Controller the intensity of IKEA tradfri lights. """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.input_topic("intensity", r"struct/B", "Dimmer setting",
+                         cb=self.intensity)
+
+    def intensity(self, value):
         """ Set dimm value. """
 
         value = min(value, 254)
-
         self.api(self.light.light_control.set_dimmer(value))
+
+
+class TemperatureLight(TemperatureSettable, IntensitySettable):
+    """ IKEA tradfri light that support dimm and temperature setting. """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.update_agent(arm=True)
