@@ -74,11 +74,11 @@ class Converter(Agent):
             raise ValueError("Converter is not callable")
         yield
 
-    def on_input(self, value):
-        value = self.converter(value)  # Put value in converter
+    def on_input(self, v):
+        v = self.converter(v)  # Put value in converter
         # And publish it.
-        if value is not None and (self.output.retain or value != self.value):
-            self.value = value
+        if v is not None and (not self.output.retain or v != self.value):
+            self.value = v
             self.publish()
 
     def publish(self):
