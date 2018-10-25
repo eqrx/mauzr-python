@@ -139,12 +139,12 @@ class InitiatorMixin:  # pragma: no cover
     def __init__(self, thin=False):
 
         if not thin:
-            from mauzr.agents.logger import LogSender
+            #from mauzr.agents.logger import LogSender
             from mauzr.agents.spawner import AgentSpawner
             # Add agent spawner.
             spawner = AgentSpawner(self, "spawner")
             # Spawn optional agents.
-            spawner.spawn_agent(LogSender, "logger")
+            #spawner.spawn_agent(LogSender, "logger")
             if 'NOTIFY_SOCKET' in env:
                 from mauzr.agents.systemd import Notify
                 spawner.spawn_agent(Notify, "systemd")
