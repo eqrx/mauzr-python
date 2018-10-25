@@ -60,6 +60,7 @@ class Input(Agent):
         self.stabilize_task = None
         super().__init__(*args, **kwargs)
         self.option("identifier", "struct/B", "Input identifier")
+        self.option("invert", "struct/?", "Invert value before publishing")
         self.option("edge", "str", "Edge to detect")
         self.output_topic("output", r"struct\/[?B]",
                           "Output topic for the pin value")
@@ -68,7 +69,7 @@ class Input(Agent):
     def on_stable(self):
         """ Called when the input value is considered stable - publishes it. """
 
-        self.output(self.value)
+        self.output(not self.value if self.invert else self.value)
 
     def select_inputs(self):
         """ Select the GPI until it has a new value. """
