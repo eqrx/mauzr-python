@@ -76,7 +76,7 @@ class BME280Calculator:
         v2 = reading - hc[3] * 64 - hc[4] / 16384 * v1
         v3 = 1 + hc[2] / 67108864 * v1
         v4 = v2 * hc[1] * (v3 * (1 + hc[5] / 67108864 * v1 * v3)) / 65536
-        return v4 * (1 - hc[0] * v4 / 524288)
+        return min(v4 * (1 - hc[0] * v4 / 524288), 100)
 
 
 class LowDriver(I2CMixin, PollMixin, Agent):
@@ -100,7 +100,7 @@ class LowDriver(I2CMixin, PollMixin, Agent):
 
         a = self.i2c.read_register(0x88, amount=24)
         b = self.i2c.read_register(0xa1, amount=1)
-        c = self.i2c.read_register(0xe2, amount=7)
+        c = self.i2c.read_register(0xe1, amount=8)
         self.calibration(a+b+c)
         yield
         self.collect_task = None
@@ -139,9 +139,10 @@ class HighDriver(Agent, BME280Calculator):
 
         self.tc = struct.unpack("<Hhh", data[0:6])
         self.pc = struct.unpack("<Hhhhhhhhh", data[6:24])
-        self.hc = list(data[12:18])
-        self.hc[4] = (self.hc[4] << 4) | self.hc[5] & 0x0f
-        self.hc[5] = (self.hc[5] << 4) | (self.hc[5] >> 4) & 0x0f
+        hd = list(struct.unpack("<BhBbBbb", data[24:32]))
+        self.hc = hd[0:3] + [None, None, hd[6]]
+        self.hc[3] = (hd[3] << 4) | hd[4] & 0x0f
+        self.hc[4] = (hd[5] << 4) | (hd[4] >> 4) & 0x0f
         self.hc = tuple(self.hc)
 
         if self.cached_measurement is not None:
@@ -152,11 +153,15 @@ class HighDriver(Agent, BME280Calculator):
     def on_input(self, data):
         """ Convert incoming measurements to usable data. """
 
+        if self.hc is None:
+            return
+
         p_reading = ((data[0] << 16) | (data[1] << 8) | data[2]) >> 4
         t_reading = ((data[3] << 16) | (data[4] << 8) | data[5]) >> 4
         h_reading = (data[6] << 8) | data[7]
 
         t_fine = self.calc_t_fine(t_reading, self.tc)
         self.temperature(self.calc_temperature(t_fine))
-        self.pressure(int(self.calc_pressure(p_reading, t_fine, self.pc)))
-        self.humidity(int(self.calc_humidity(h_reading, t_fine, self.hc)))
+        self.pressure(round(self.calc_pressure(p_reading, t_fine, self.pc)))
+        h = round(self.calc_humidity(h_reading, t_fine, self.hc))
+        self.humidity(h)
