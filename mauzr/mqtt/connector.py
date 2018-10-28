@@ -8,6 +8,7 @@ import shelve
 import weakref
 import time
 import dns.resolver
+from dns.exception import DNSException
 from .messages import Connect, ConnAck, Disconnect, PingReq, PingResp
 from .messages import Publish, PubAck, PubRec, PubRel, PubComp
 from .messages import Subscribe, SubAck, Unsubscribe, UnsubAck
@@ -159,8 +160,18 @@ def default_socket_factory(log, domain, ca, crt, key):  # pragma: no cover
     ctx.check_hostname = True
 
     def _new():
+        resolver = dns.resolver.Resolver()
+        resolver.timeout = 5
+        resolver.lifetime = 5
         while True:
-            for record in dns.resolver.query(query, 'SRV'):
+            try:
+                records = resolver.query(query, 'SRV')
+            except DNSException:
+                log.exception("Name resolving failed")
+                yield None
+                continue
+
+            for record in records:
                 host, port = str(record.target), record.port
                 # Open socket and perform handshake
                 log.debug("Opening Socket to %s:%s", host, port)
@@ -479,43 +490,46 @@ class Connector:
 
         sock, shelf, log = self.sock, self.qos_shelf, self.log
 
-        if PingResp.TYPE == op:
-            # Timer already reset.
-            log.debug("Received ping response")
-            buf = self.sock.recv(1)[0]
-            assert buf == 0
-        elif PubRec.TYPE == op:
-            # Convert PUBREC to PUBREL and send it out.
-            rec = PubRec(sock, op)
-            shelf[rec.pkg_id] = rec
-            sock.send(PubRel(id=rec.pkg_id))
-            log.debug("Outgoing publish %s received", rec.pkg_id)
-        elif PubComp.TYPE == op:
-            # Clear QoS shelf.
-            comp = PubComp(sock, op)
-            del shelf[comp.pkg_id]
-            log.debug("Outgoing publish %s completed", comp.pkg_id)
-        elif PubAck.TYPE == op:
-            pkg_id = PubAck(sock, op).pkg_id
-            # Clear QoS shelf.
-            del shelf[pkg_id]
-            log.debug("Outgoing publish %s acknowledged", pkg_id)
-        elif UnsubAck.TYPE == op:
-            unsuback = UnsubAck(sock, op)
-            # Inform all subscribed handles about unsub.
-            [h.on_unsub(unsuback.pkg_id) for h in self.handles.values()]
-            log.debug("Unsub %s acknowledged", unsuback.pkg_id)
-        elif SubAck.TYPE == op:
-            suback = SubAck(sock, op)
-            # Inform all subscribed handles about sub.
-            [h.on_sub(suback.pkg_id) for h in self.handles.values()]
-            log.debug("Sub %s acknowledged", suback.pkg_id)
-        elif PubRel.TYPE == op:
-            self._handle_incoming_publish_release(op)
-        elif Publish.TYPE == op & 0xf0:
-            self._handle_incoming_publish(op)
-        else:
-            raise MQTTProtocolError(f"Received unknown op code: {hex(op)}")
+        try:
+            if PingResp.TYPE == op:
+                # Timer already reset.
+                log.debug("Received ping response")
+                buf = self.sock.recv(1)[0]
+                assert buf == 0
+            elif PubRec.TYPE == op:
+                # Convert PUBREC to PUBREL and send it out.
+                rec = PubRec(sock, op)
+                shelf[rec.pkg_id] = rec
+                sock.send(PubRel(id=rec.pkg_id))
+                log.debug("Outgoing publish %s received", rec.pkg_id)
+            elif PubComp.TYPE == op:
+                # Clear QoS shelf.
+                comp = PubComp(sock, op)
+                del shelf[comp.pkg_id]
+                log.debug("Outgoing publish %s completed", comp.pkg_id)
+            elif PubAck.TYPE == op:
+                pkg_id = PubAck(sock, op).pkg_id
+                # Clear QoS shelf.
+                del shelf[pkg_id]
+                log.debug("Outgoing publish %s acknowledged", pkg_id)
+            elif UnsubAck.TYPE == op:
+                unsuback = UnsubAck(sock, op)
+                # Inform all subscribed handles about unsub.
+                [h.on_unsub(unsuback.pkg_id) for h in self.handles.values()]
+                log.debug("Unsub %s acknowledged", unsuback.pkg_id)
+            elif SubAck.TYPE == op:
+                suback = SubAck(sock, op)
+                # Inform all subscribed handles about sub.
+                [h.on_sub(suback.pkg_id) for h in self.handles.values()]
+                log.debug("Sub %s acknowledged", suback.pkg_id)
+            elif PubRel.TYPE == op:
+                self._handle_incoming_publish_release(op)
+            elif Publish.TYPE == op & 0xf0:
+                self._handle_incoming_publish(op)
+            else:
+                raise MQTTProtocolError(f"Received unknown op code: {hex(op)}")
+        except AttributeError:
+            pass
 
     def _handle_incoming_publish_release(self, op):  # pragma: no cover
         """ Handle an incoming publish release.

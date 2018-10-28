@@ -46,6 +46,8 @@ class String(Serializer):
             str: Unpacked string.
         """
 
+        if not data:
+            return None
         return data.decode()
 
 
