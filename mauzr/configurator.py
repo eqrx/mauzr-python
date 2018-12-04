@@ -32,14 +32,15 @@ def whipe(shell, log):
     def _whipe_cb(_value, handle):
         handles.append(handle)
 
-    tokens = [shell.mqtt(topic=f"{branch}/#", ser=ser, qos=1,
-                         retain=True).sub(_whipe_cb, wants_handle=True)
-              for branch in ("cfg", "fmt", "desc")]
-    time.sleep(3)
-    del tokens
-    for h in handles:
-        log.info("Whiping %s", h.topic)
-        h(bytes())
+    for branch in ("cfg", "fmt", "desc"):
+        tokens = [shell.mqtt(topic=f"{branch}/#", ser=ser, qos=1,
+                             retain=True).sub(_whipe_cb, wants_handle=True)]
+        time.sleep(3)
+        del tokens
+        for h in handles:
+            log.info("Whiping %s", h.topic)
+            h(bytes())
+        handles = []
     log.info("Done whiping cfg tree")
 
 def process_topics(shell, log, topic_data):
