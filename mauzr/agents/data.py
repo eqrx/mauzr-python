@@ -79,6 +79,7 @@ class Converter(Agent):
         # And publish it.
         if v is not None and (not self.output.retain or v != self.value):
             self.value = v
+            self.log.debug("New value: %s", v)
             self.publish()
 
     def publish(self):
