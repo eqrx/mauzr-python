@@ -18,7 +18,7 @@ class Light(Agent):
         self.option("host", "str", "Gateway hostname")
         self.option("psk", "str", "Gateway access key")
         self.option("identity", "str", "Gateway access identity")
-        self.option("index", "struct/B", "Light index")
+        self.option("device_name", "str", "Light name")
 
         self.update_agent(arm=True)
 
@@ -27,8 +27,11 @@ class Light(Agent):
         self.api = APIFactory(host=self.host,
                               psk_id=self.identity, psk=self.psk).request
         devices = self.api(self.api(Gateway().get_devices()))
-        lights = [dev for dev in devices if dev.has_light_control]
-        self.light = lights[self.index]
+        lights = [dev for dev in devices
+                  if dev.has_light_control and dev.name == self.device_name]
+        if len(lights) != 1:
+            raise ValueError("Light unknown")
+        self.light = lights[0]
 
         yield
         self.api = None
